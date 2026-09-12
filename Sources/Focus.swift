@@ -11,6 +11,13 @@ enum Focus {
     /// タブの副役割。ApplicationServices は定数を出していないので文字列で持つ
     private static let tabButtonSubrole = "AXTabButton"
 
+    /// 前方一致に要求する最小の長さ。これより短い断片だと、
+    /// たまたま似た名前のファイルを開いているだけの窓に当たる
+    private static let minimumStemLength = 6
+
+    /// ツリーは数千要素になる。1回の探索で見る上限
+    private static let visitLimit = 6000
+
     /// アクセシビリティの許可がないとウィンドウを触れない。
     /// 無ければ設定を開くよう促す（初回だけ出る）
     @discardableResult
@@ -32,20 +39,20 @@ enum Focus {
         app.activate(options: [.activateAllWindows])
 
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
-        let windows = Self.windows(of: axApp)
-        guard !windows.isEmpty else { return }
+        let openWindows = windows(of: axApp)
+        guard !openWindows.isEmpty else { return }
 
         // 1. 最前面のタブがそのセッションなら、ここで終わる
         if !pending.title.isEmpty,
-           let window = windows.first(where: { titleMatches(of: $0, pending.title) })
+           let window = openWindows.first(where: { titleMatches(of: $0, pending.title) })
         {
             raise(window, in: axApp)
             return
         }
 
         // 2. 背面のタブを探す。作業ディレクトリで絞れるなら絞る
-        let narrowed = windows.filter { holdsFolder($0, pending.folderName) }
-        let candidates = narrowed.isEmpty ? windows : narrowed
+        let narrowed = openWindows.filter { holdsFolder($0, pending.folderName) }
+        let candidates = narrowed.isEmpty ? openWindows : narrowed
 
         if !pending.title.isEmpty {
             enableRendererAccessibility(axApp)
@@ -70,11 +77,15 @@ enum Focus {
     private static func titleMatches(of window: AXUIElement, _ sessionTitle: String) -> Bool {
         guard let title = string(window, kAXTitleAttribute as String) else { return false }
         let head = title.components(separatedBy: " — ").first ?? title
-        if head == sessionTitle { return true }
+        return points(head, at: sessionTitle)
+    }
 
-        let stem = head.hasSuffix("…") ? String(head.dropLast()) : head
-        // 短い断片での前方一致は、たまたま似た名前のファイルを開いている窓に当たる
-        return stem.count >= 6 && sessionTitle.hasPrefix(stem)
+    /// 画面に出ている文字列が、そのセッションを指しているか。
+    /// 拡張が末尾を `…` に詰めるので、丸ごと一致と前方一致の両方を見る
+    private static func points(_ label: String, at sessionTitle: String) -> Bool {
+        if label == sessionTitle { return true }
+        let stem = label.hasSuffix("…") ? String(label.dropLast()) : label
+        return stem.count >= minimumStemLength && sessionTitle.hasPrefix(stem)
     }
 
     /// フォルダを開いていないウィンドウでは題名に名前が入らない。その場合は絞り込みに使えない
@@ -99,21 +110,21 @@ enum Focus {
     }
 
     /// 開いているタブのうち、題名がそのセッションのものを探す。
-    /// ツリーは数千要素になるので、幅優先で見る数を区切る。
+    /// 幅優先で、見る数を区切って探す。
     /// セッションの題名は拡張のヘッダーにも出るので、タブだと分かる要素を優先する
     private static func findTab(in window: AXUIElement, titled sessionTitle: String) -> AXUIElement? {
+        // 先頭を取り出して詰め直すと要素数の二乗になる。読む位置だけ進める
         var queue = [window]
-        var seen = 0
+        var cursor = 0
         var fallback: AXUIElement?
 
-        while !queue.isEmpty, seen < 6000 {
-            let element = queue.removeFirst()
-            seen += 1
+        while cursor < queue.count, cursor < visitLimit {
+            let element = queue[cursor]
+            cursor += 1
 
-            if isPressable(element), labelMatches(element, sessionTitle) {
-                if string(element, kAXSubroleAttribute as String) == tabButtonSubrole {
-                    return element
-                }
+            let subrole = string(element, kAXSubroleAttribute as String)
+            if isPressable(element, subrole: subrole), labelMatches(element, sessionTitle) {
+                if subrole == tabButtonSubrole { return element }
                 if fallback == nil { fallback = element }
             }
             queue.append(contentsOf: children(element))
@@ -121,10 +132,8 @@ enum Focus {
         return fallback
     }
 
-    private static func isPressable(_ element: AXUIElement) -> Bool {
-        if string(element, kAXSubroleAttribute as String) == tabButtonSubrole {
-            return true
-        }
+    private static func isPressable(_ element: AXUIElement, subrole: String?) -> Bool {
+        if subrole == tabButtonSubrole { return true }
         let role = string(element, kAXRoleAttribute as String)
         return role == (kAXRadioButtonRole as String) || role == (kAXButtonRole as String)
     }
@@ -132,10 +141,7 @@ enum Focus {
     private static func labelMatches(_ element: AXUIElement, _ sessionTitle: String) -> Bool {
         for attribute in [kAXTitleAttribute, kAXDescriptionAttribute] as [String] {
             guard let label = string(element, attribute), !label.isEmpty else { continue }
-            if label == sessionTitle { return true }
-
-            let stem = label.hasSuffix("…") ? String(label.dropLast()) : label
-            if stem.count >= 6, sessionTitle.hasPrefix(stem) { return true }
+            if points(label, at: sessionTitle) { return true }
         }
         return false
     }
