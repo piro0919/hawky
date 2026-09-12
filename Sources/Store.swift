@@ -3,12 +3,18 @@ import Foundation
 struct Pending {
     let sessionID: String
     let cwd: String
+    /// Claude Code が付けたセッションの題名。フックが transcript から拾う。
+    /// 題名が付く前に待ちが起きると空になる
+    let title: String
     let at: Date
 
     /// 一覧に出す名前。作業ディレクトリ名だけで見分ける
     var label: String {
-        let name = (cwd as NSString).lastPathComponent
-        return name.isEmpty ? String(sessionID.prefix(8)) : name
+        folderName.isEmpty ? String(sessionID.prefix(8)) : folderName
+    }
+
+    var folderName: String {
+        (cwd as NSString).lastPathComponent
     }
 }
 
@@ -36,7 +42,12 @@ enum Store {
                 try? fm.removeItem(at: file)
                 continue
             }
-            out.append(Pending(sessionID: id, cwd: (obj["cwd"] as? String) ?? "", at: at))
+            out.append(Pending(
+                sessionID: id,
+                cwd: (obj["cwd"] as? String) ?? "",
+                title: (obj["title"] as? String) ?? "",
+                at: at
+            ))
         }
         // 古い待ちほど気付かれていない。上に置く
         return out.sorted { $0.at < $1.at }
