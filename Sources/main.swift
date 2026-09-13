@@ -2,6 +2,7 @@ import AppKit
 
 /// メニューバーに常駐し、許可待ちの件数を出す。
 /// セッションが無くても終了しない。消えると気付けないため
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var watcher: DispatchSourceFileSystemObject?
@@ -17,7 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startWatching()
         // 期限切れの待ちを落とすため、変化が無くても定期的に見直す
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.refresh()
+            // Timer は主の実行ループから呼ぶ。飛ばずに入り、違ったら落とす
+            MainActor.assumeIsolated { self?.refresh() }
         }
         Focus.ensureTrusted()
         refresh()

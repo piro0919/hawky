@@ -5,8 +5,9 @@ import ApplicationServices
 /// 1. そのセッションが最前面のタブなら、ウィンドウの題名がセッションの題名になる。それで突き合わせる
 /// 2. 背面のタブに居るなら、描画側のツリーを出してタブを押す
 /// 3. 題名で決まらなければ、作業ディレクトリ名だけで突き合わせる
+@MainActor
 enum Focus {
-    static let cursorBundleID = "com.todesktop.230313mzl4w4u92"
+    nonisolated static let cursorBundleID = "com.todesktop.230313mzl4w4u92"
 
     /// タブの副役割。ApplicationServices は定数を出していないので文字列で持つ
     private static let tabButtonSubrole = "AXTabButton"
@@ -22,7 +23,9 @@ enum Focus {
     /// 無ければ設定を開くよう促す（初回だけ出る）
     @discardableResult
     static func ensureTrusted() -> Bool {
-        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+        // kAXTrustedCheckOptionPrompt は C から来る var なので Swift 6 では触れない。
+        // 中身は固定の文字列で、変わることがない
+        let key = "AXTrustedCheckOptionPrompt"
         return AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
     }
 

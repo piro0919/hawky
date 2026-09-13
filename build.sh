@@ -21,6 +21,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 swiftc \
   -target "$TARGET" \
+  -swift-version 6 \
   -O \
   -framework AppKit \
   -framework ApplicationServices \
