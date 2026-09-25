@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ~/.claude/settings.json に Machiban のフックを登録する。
+// ~/.claude/settings.json に Hawky のフックを登録する。
 // 既にある他のフックは触らない。何度流しても同じ結果になる。
 //   node hook/install.mjs           … 登録
 //   node hook/install.mjs --remove  … 解除
@@ -9,15 +9,15 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const settingsPath = join(homedir(), ".claude", "settings.json");
-const hookPath = join(dirname(fileURLToPath(import.meta.url)), "machiban-hook.mjs");
+const hookPath = join(dirname(fileURLToPath(import.meta.url)), "hawky-hook.mjs");
 const remove = process.argv.includes("--remove");
 
 const settings = existsSync(settingsPath)
   ? JSON.parse(readFileSync(settingsPath, "utf8"))
   : {};
-if (existsSync(settingsPath)) copyFileSync(settingsPath, `${settingsPath}.bak.machiban`);
+if (existsSync(settingsPath)) copyFileSync(settingsPath, `${settingsPath}.bak.hawky`);
 
-const isMine = (h) => String(h.command ?? "").includes("machiban-hook.mjs");
+const isMine = (h) => String(h.command ?? "").includes("hawky-hook.mjs");
 const entry = (mode) => ({
   type: "command",
   command: `node '${hookPath}' ${mode}`,
@@ -52,4 +52,4 @@ if (!remove) {
 settings.hooks = hooks;
 mkdirSync(dirname(settingsPath), { recursive: true });
 writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
-console.log(remove ? "Machiban のフックを外しました" : "Machiban のフックを登録しました");
+console.log(remove ? "Hawky のフックを外しました" : "Hawky のフックを登録しました");

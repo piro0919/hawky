@@ -1,16 +1,16 @@
 #!/bin/bash
-# Machiban をビルドして Machiban.app を作る。Xcode 本体は不要
+# Hawky をビルドして Hawky.app を作る。Xcode 本体は不要
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
-APP="Machiban.app"
+APP="Hawky.app"
 TARGET="arm64-apple-macos14.0"
-VERSION="${MACHIBAN_VERSION:-0.0.0}"
+VERSION="${HAWKY_VERSION:-0.0.0}"
 
 # 暫定署名だとビルドのたびに同一性が変わり、アクセシビリティの許可が毎回外れる。
 # 証明書があればそれを使う
-SIGN_IDENTITY="${MACHIBAN_SIGN_IDENTITY:-Okigae Dev}"
+SIGN_IDENTITY="${HAWKY_SIGN_IDENTITY:-Okigae Dev}"
 if ! security find-identity -v -p codesigning | grep -q "$SIGN_IDENTITY"; then
   echo "警告: 証明書「${SIGN_IDENTITY}」が見つかりません。暫定署名にします（許可が外れます）" >&2
   SIGN_IDENTITY="-"
@@ -25,7 +25,7 @@ swiftc \
   -O \
   -framework AppKit \
   -framework ApplicationServices \
-  -o "$APP/Contents/MacOS/Machiban" \
+  -o "$APP/Contents/MacOS/Hawky" \
   Sources/Paths.swift Sources/Store.swift Sources/Focus.swift Sources/main.swift
 
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -33,10 +33,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Machiban</string>
-  <key>CFBundleDisplayName</key><string>Machiban</string>
-  <key>CFBundleExecutable</key><string>Machiban</string>
-  <key>CFBundleIdentifier</key><string>io.kkweb.machiban</string>
+  <key>CFBundleName</key><string>Hawky</string>
+  <key>CFBundleDisplayName</key><string>Hawky</string>
+  <key>CFBundleExecutable</key><string>Hawky</string>
+  <key>CFBundleIdentifier</key><string>io.kkweb.hawky</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>

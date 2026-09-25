@@ -1,9 +1,9 @@
-# Machiban
+# Hawky
 
 Claude Code が許可を待っていることに、メニューバーで気付くための常駐アプリ。
 
 複数のセッションを同時に開いていると、どれかが許可を待って止まっていても気付けない。
-Machiban はメニューバーに待ちの件数を出し、どのセッションが待っているかを一覧で見せ、
+Hawky はメニューバーに待ちの件数を出し、どのセッションが待っているかを一覧で見せ、
 選んだセッションを Cursor の画面に出す。
 
 ## 仕組み
@@ -14,7 +14,7 @@ Claude Code のフックを使う。
 - `PostToolUse` / `UserPromptSubmit` / `Stop` のいずれかで、そのセッションの待ちが消える
 - 解消のフックが飛ばなかった待ちは10分で自動的に消える
 
-待ちは `~/.claude/machiban/pending/` に1件1ファイルで置かれ、アプリはそこを見張る。
+待ちは `~/.claude/hawky/pending/` に1件1ファイルで置かれ、アプリはそこを見張る。
 ファイルには session_id と作業ディレクトリのほかに、セッションの題名を入れる。
 題名は transcript の最後の `ai-title` レコードから拾う。これが画面上のセッションと
 待ちのレコードを結ぶ唯一の手掛かりになる。
@@ -36,9 +36,9 @@ Claude Code のフックを使う。
 ## 使う
 
 ```sh
-./build.sh          # Machiban.app ができる
+./build.sh          # Hawky.app ができる
 node hook/install.mjs   # ~/.claude/settings.json にフックを登録する
-open ./Machiban.app
+open ./Hawky.app
 ```
 
 初回はアクセシビリティの許可を求められる。ウィンドウを前面に出すために要る。

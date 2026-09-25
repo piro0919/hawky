@@ -17,7 +17,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 const mode = process.argv[2] === "add" ? "add" : "clear";
-const dir = join(homedir(), ".claude", "machiban", "pending");
+const dir = join(homedir(), ".claude", "hawky", "pending");
 
 let input = {};
 try {
