@@ -28,9 +28,13 @@ struct Pending {
 }
 
 enum Store {
-    /// Cursor ごと落ちるなどして解消のフックが飛ばなかった待ちは、
-    /// この時間を過ぎたら捨てる。件数が減らないまま居座るのを防ぐ
-    static let expiry: TimeInterval = 10 * 60
+    /// 待ちを捨てる決まり。許可待ちは何十分も放っておかれることがあるので、時間では捨てない。
+    /// フックが Claude Code のプロセス番号を残していれば、そのプロセスが終わったときに捨てる。
+    /// Cursor ごと落ちて解消のフックが飛ばなかった待ちも、これで居座らない。
+    /// 10分で捨てていた頃は、10分を超えて待たせた本物の許可待ちまで消えていた
+    static let expiryWithProcess: TimeInterval = 24 * 60 * 60
+    /// プロセス番号の無い記録（古いフックが書いたものや、番号を取り損ねたもの）は時間で捨てる
+    static let expiryWithoutProcess: TimeInterval = 60 * 60
 
     static func load() -> [Pending] {
         let fm = FileManager.default
@@ -49,7 +53,8 @@ enum Store {
             else { continue }
 
             let at = Date(timeIntervalSince1970: (obj["at"] as? Double) ?? 0)
-            if Date().timeIntervalSince(at) > expiry {
+            let pid = (obj["pid"] as? Int32) ?? Int32((obj["pid"] as? Int) ?? 0)
+            if isStale(at: at, pid: pid) {
                 try? fm.removeItem(at: file)
                 continue
             }
@@ -64,5 +69,17 @@ enum Store {
         }
         // 古い待ちほど気付かれていない。上に置く
         return out.sorted { $0.at < $1.at }
+    }
+
+    static func isStale(at: Date, pid: Int32, now: Date = Date()) -> Bool {
+        let age = now.timeIntervalSince(at)
+        guard pid > 0 else { return age > expiryWithoutProcess }
+        return age > expiryWithProcess || !isAlive(pid)
+    }
+
+    /// そのプロセスが居るか。シグナル 0 は何も送らずに、居るかどうかだけを返す。
+    /// 他人のプロセスなら EPERM になるが、居ることには変わりない
+    static func isAlive(_ pid: Int32) -> Bool {
+        kill(pid, 0) == 0 || errno == EPERM
     }
 }

@@ -53,6 +53,17 @@ enum SelfTest {
             check(!Focus.holdsFolder("状況確認", "koidamashii"), "フォルダを開いていない窓には当てない")
         }
 
+        // 待ちを捨てる決まり
+        do {
+            let now = Date()
+            let me = getpid()
+            check(!Store.isStale(at: now.addingTimeInterval(-30 * 60), pid: me, now: now), "プロセスが生きていれば30分たっても残す")
+            check(Store.isStale(at: now, pid: 999_999, now: now), "プロセスが居なければすぐ捨てる")
+            check(Store.isStale(at: now.addingTimeInterval(-25 * 60 * 60), pid: me, now: now), "生きていても24時間たてば捨てる")
+            check(!Store.isStale(at: now.addingTimeInterval(-30 * 60), pid: 0, now: now), "番号が無ければ1時間までは残す")
+            check(Store.isStale(at: now.addingTimeInterval(-61 * 60), pid: 0, now: now), "番号が無ければ1時間で捨てる")
+        }
+
         // 一覧に出す名前
         do {
             let inRepo = Pending(sessionID: "abcdef123456", cwd: "/Users/me/Repository/hawky", title: "", at: Date())

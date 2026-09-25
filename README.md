@@ -53,15 +53,16 @@ something when there is one.
 - **Counts the sessions that are waiting.** The number sits next to the hawk in
   the menu bar. With nothing waiting, the hawk is dimmed.
 - **Takes you there in one click.** Each waiting session is a row in the menu,
-  named after its repository.
+  named "<session title> — <folder>", the way Cursor names its windows.
 - **Tells two windows on the same repository apart.** It matches the window by
   the title Claude Code gave the session, not only by the folder.
 - **Works with Cursor windows merged into macOS tabs** (`window.nativeTabs`).
   A background tab is not in the window list at all; Hawky finds it in the tab
   bar and presses it.
 - **Clears itself as soon as the session moves on.** Approving, denying and
-  typing a new prompt all count. An entry nobody cleared expires after ten
-  minutes, so the count never gets stuck.
+  typing a new prompt all count. A wait stays for as long as it lasts, and
+  goes away when its Claude Code process does — so closing Cursor never
+  leaves the count stuck.
 - **Launch at Login** and **Check for Updates…** are in the menu.
 
 ## How it works
@@ -69,7 +70,7 @@ something when there is one.
 Claude Code fires a `Notification` hook with `permission_prompt` when it stops
 to ask. Hawky's hook writes one small file per waiting session to
 `~/.claude/hawky/pending/`, with the session's title read from the end of its
-transcript. `PostToolUse`, `UserPromptSubmit` and `Stop` delete it again. The app
+transcript, the folder it was opened in, and the ID of its Claude Code process. `PostToolUse`, `UserPromptSubmit` and `Stop` delete it again. The app
 watches that folder and does nothing else in the background.
 
 When you pick a row, it looks for the session in this order:

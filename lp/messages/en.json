@@ -38,7 +38,7 @@
     },
     "clears": {
       "title": "Clears itself",
-      "body": "Approve, deny or type a new prompt and the entry goes away on its own. Anything left behind expires after ten minutes, so the count never gets stuck."
+      "body": "Approve, deny or type a new prompt and the entry goes away on its own. A wait stays as long as it lasts, and anything left behind goes away with its Claude Code process, so the count never gets stuck."
     },
     "quiet": {
       "title": "Just leave it there",
@@ -80,7 +80,7 @@
     "sections": [
       {
         "title": "What it reads",
-        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting: the session ID, its working folder, the session title from the end of its transcript, and the time. The app reads those files, and the titles of Cursor's windows and tabs so it can find the right one. It does not read your code or your conversations."
+        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting: the session ID, the folder it was opened in, the session title from the end of its transcript, the ID of its Claude Code process, and the time. The app reads those files, and the titles of Cursor's windows and tabs so it can find the right one. It does not read your code or your conversations."
       },
       {
         "title": "Nothing leaves the Mac",

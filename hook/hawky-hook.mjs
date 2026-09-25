@@ -14,7 +14,8 @@ import {
   closeSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { basename, join } from "node:path";
 
 const mode = process.argv[2] === "add" ? "add" : "clear";
 const dir = join(homedir(), ".claude", "hawky", "pending");
@@ -93,6 +94,27 @@ function projectFolder(path) {
   return "";
 }
 
+// このフックを呼んだ Claude Code のプロセス番号。フックはシェルを挟んで呼ばれるので、
+// 親を辿って claude という名前のプロセスを探す。アプリはこのプロセスが生きている間だけ
+// 待ちを残す。時間で捨てていた頃は、10分を超えて待たせた本物の許可待ちまで消えていた
+function claudeProcess() {
+  let pid = process.ppid;
+  for (let depth = 0; depth < 6 && pid > 1; depth++) {
+    try {
+      const [ppid, ...command] = execFileSync("ps", ["-o", "ppid=,comm=", "-p", String(pid)], {
+        encoding: "utf8",
+      })
+        .trim()
+        .split(/\s+/);
+      if (basename(command.join(" ")) === "claude") return pid;
+      pid = Number(ppid);
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
 const file = join(dir, `${id}.json`);
 if (mode === "add") {
   mkdirSync(dir, { recursive: true });
@@ -103,6 +125,7 @@ if (mode === "add") {
       cwd: input.cwd ?? "",
       project: projectFolder(input.transcript_path) || input.cwd || "",
       title: sessionTitle(input.transcript_path),
+      pid: claudeProcess(),
       at: Math.floor(Date.now() / 1000),
     }),
   );
