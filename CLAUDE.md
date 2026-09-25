@@ -57,17 +57,22 @@ node hook/install.mjs --remove
 ## アイコン
 
 `assets/icon-source.png` が原画。ChatGPT で作った、四隅まで塗り切った正方形。
-`python3 scripts/build-icons.py` で角丸と余白を付け、`Resources/` に `.icns` と
+`python3 Tools/make-icon.py` で角丸と余白を付け、`Resources/` に `.icns` と
 メニューバーの影絵を書き出す。影絵は、白い鷹と暖色の地を青の成分だけで切り分けて作る。
 
 ## リリース
 
-1. `scripts/release.sh <版>` で `dist/Hawky-<版>.zip` を作る。最後に sha256 が出る
-2. `gh release create v<版> dist/Hawky-<版>.zip` で上げる
-3. Homebrew のタップ `piro0919/homebrew-tap` の `Casks/hawky.rb` の version と sha256 を直す
+1. `./release.sh <版>` を叩く。ビルドと `--selftest` のあと、DMG・更新用の zip・
+   署名した `appcast.xml` を作り、`gh release create` で GitHub Releases に上げる。
+   最後に DMG の sha256 が出る
+2. Homebrew のタップ `piro0919/homebrew-tap` の `Casks/hawky.rb` の version と sha256 を直す
+
+更新は Sparkle。鍵は Konechi・Gocci・Nonja・Okigae と共有していて、秘密鍵はログイン
+キーチェーンにある。フィードは `releases/latest/download/appcast.xml`。
 
 署名は自己署名の「Okigae Dev」。公証していないので、ダウンロードした人は初回に
-右クリックの「開く」か `xattr -dr com.apple.quarantine` が要る。
+システム設定の「プライバシーとセキュリティ」で「このまま開く」を押す必要がある。
+右クリックの「開く」は Sequoia で塞がれた。
 
 ## 分かっていること
 

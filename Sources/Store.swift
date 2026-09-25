@@ -25,9 +25,11 @@ enum Store {
 
     static func load() -> [Pending] {
         let fm = FileManager.default
-        guard let files = try? fm.contentsOfDirectory(
-            at: Paths.pendingDir, includingPropertiesForKeys: nil
-        ) else { return [] }
+        guard
+            let files = try? fm.contentsOfDirectory(
+                at: Paths.pendingDir, includingPropertiesForKeys: nil
+            )
+        else { return [] }
 
         var out: [Pending] = []
         for file in files where file.pathExtension == "json" {
@@ -42,12 +44,13 @@ enum Store {
                 try? fm.removeItem(at: file)
                 continue
             }
-            out.append(Pending(
-                sessionID: id,
-                cwd: (obj["cwd"] as? String) ?? "",
-                title: (obj["title"] as? String) ?? "",
-                at: at
-            ))
+            out.append(
+                Pending(
+                    sessionID: id,
+                    cwd: (obj["cwd"] as? String) ?? "",
+                    title: (obj["title"] as? String) ?? "",
+                    at: at
+                ))
         }
         // 古い待ちほど気付かれていない。上に置く
         return out.sorted { $0.at < $1.at }

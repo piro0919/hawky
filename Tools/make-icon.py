@@ -3,7 +3,7 @@
 
 原画は ChatGPT で作った、四隅まで塗り切った正方形。角丸と余白はここで付ける。
 
-    python3 scripts/build-icons.py
+    python3 Tools/make-icon.py
 
 書き出すもの:
     assets/AppIcon.png         角丸と余白を付けた 1024px。README と LP でも使う

@@ -1,2 +1,5 @@
 Hawky.app/
 dist/
+build/
+Vendor/
+.DS_Store

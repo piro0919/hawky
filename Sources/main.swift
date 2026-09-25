@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 
 /// メニューバーに常駐し、許可待ちの件数を出す。
 /// セッションが無くても終了しない。消えると気付けないため
@@ -23,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Focus.ensureTrusted()
         refresh()
+        Updater.shared.checkQuietly()
     }
 
     /// フックがファイルを置いた瞬間に反応する
@@ -76,10 +78,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         menu.addItem(.separator())
+
+        let login = NSMenuItem(title: Strings.launchAtLogin, action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+        login.target = self
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(login)
+
+        let update = NSMenuItem(title: Strings.checkForUpdates, action: #selector(checkForUpdates), keyEquivalent: "")
+        update.target = self
+        menu.addItem(update)
+
+        menu.addItem(.separator())
         let quit = NSMenuItem(title: Strings.quit, action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
     }
+
+    /// 常駐して見張るのが役目なので、ログイン時に起動しないと意味が薄い。切り替えはここだけ
+    @objc private func toggleLaunchAtLogin() {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            } else {
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            NSSound.beep()
+        }
+    }
+
+    @objc private func checkForUpdates() { Updater.shared.checkNow() }
 
     @objc private func revealPending(_ sender: NSMenuItem) {
         guard pending.indices.contains(sender.tag) else { return }
@@ -95,6 +123,10 @@ extension AppDelegate: NSMenuDelegate {
         refresh()
         rebuildMenu()
     }
+}
+
+if CommandLine.arguments.contains("--selftest") {
+    exit(MainActor.assumeIsolated { SelfTest.run() })
 }
 
 let app = NSApplication.shared

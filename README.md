@@ -1,91 +1,100 @@
 # Hawky
 
-<p align="center">
-  <img src="assets/AppIcon.png" alt="Hawky" width="128" height="128" />
-</p>
+A macOS menu bar app that tells you when Claude Code is waiting for permission,
+and takes you to it.
 
-<p align="center">
-  <strong>A macOS menu bar app that tells you when Claude Code is waiting for permission — and takes you there.</strong>
-</p>
+Run Claude Code in a few repositories at once, one Cursor window each, and
+sooner or later one of them stops to ask whether it may run something. It then
+sits there, silently, while you are looking at another window. You find out ten
+minutes later.
 
-<p align="center">
-  <a href="https://hawky.kkweb.io">Website</a> ·
-  <a href="https://github.com/piro0919/hawky/releases/latest">Download</a> ·
-  <a href="https://buymeacoffee.com/piro0919">Buy Me a Coffee</a>
-</p>
+Hawky keeps watch from the menu bar. When a session is waiting, a count appears
+next to the hawk. Pick the session from the menu and Hawky brings that Cursor
+window to the front — also when the window is tucked behind others as a macOS
+tab.
 
----
+macOS 14+. No Xcode needed: `./build.sh` compiles with the Swift that ships with
+the Command Line Tools.
 
-## Why Hawky
+There is a page for it at [hawky.kkweb.io](https://hawky.kkweb.io).
 
-I run Claude Code in several repositories at once, one Cursor window each. Sooner or later one of them stops to ask "may I run this?" — and sits there, silently, while I'm looking at another window. I'd find out ten minutes later.
-
-Hawky watches every session from the menu bar. When one is waiting, the count shows up next to the hawk. Pick it from the list and Hawky brings that Cursor window to the front, even when the window is tucked behind others as a macOS tab.
-
-## Features
-
-- A count in the menu bar of Claude Code sessions waiting for permission
-- One click to bring the waiting session's Cursor window to the front
-- Finds the window by the session's own title, so two windows on the same repository are told apart
-- Works with Cursor windows merged into macOS tabs (`window.nativeTabs`)
-- Clears itself as soon as the session moves on — approve, deny, or type a new prompt
-- Stale entries expire after 10 minutes, so the count never gets stuck
-- English / Japanese, picked from your system language
-- Menu bar only — no Dock icon, no window
-
-## Requirements
-
-- macOS 14 Sonoma or later
-- [Claude Code](https://claude.com/claude-code) running in [Cursor](https://cursor.com) (the extension or the terminal inside it)
-- Node.js on your `PATH` — the Claude Code hooks are small Node scripts
-- Accessibility permission, to bring windows to the front
-
-## Install
+## Installing
 
 With Homebrew:
 
-```sh
+```bash
 brew install --cask piro0919/tap/hawky
 ```
 
-Or download `Hawky-x.y.z.zip` from the [latest release](https://github.com/piro0919/hawky/releases/latest), unzip it and move `Hawky.app` to `/Applications`.
+Or download the DMG from [Releases](https://github.com/piro0919/hawky/releases/latest)
+and drag Hawky into Applications.
 
-Hawky is not notarized. The first time, right-click `Hawky.app` and choose **Open**, or run:
+The first launch will be blocked: Hawky is signed with a self-signed certificate,
+not an Apple Developer ID, so macOS cannot verify who made it. To let it through,
+open **System Settings → Privacy & Security**, scroll to the bottom, and click
+**Open Anyway** next to the message about Hawky. You only do this once.
 
-```sh
-xattr -dr com.apple.quarantine /Applications/Hawky.app
-```
+Then register the Claude Code hooks. They are added to `~/.claude/settings.json`;
+hooks you already have are left alone. The hooks are small Node scripts, so
+`node` needs to be on your `PATH`.
 
-Then register the Claude Code hooks. They go into `~/.claude/settings.json`; hooks you already have are left alone.
-
-```sh
+```bash
 node /Applications/Hawky.app/Contents/Resources/hook/install.mjs
 ```
 
-Open Hawky and grant Accessibility access when macOS asks.
+Grant Accessibility access when Hawky asks — it needs it to bring windows to the
+front. To take the hooks out again, run the same command with `--remove`.
 
-To remove the hooks later:
+Updates arrive through Sparkle. Hawky looks once at launch and only says
+something when there is one.
 
-```sh
-node /Applications/Hawky.app/Contents/Resources/hook/install.mjs --remove
-```
+## What it does
+
+- **Counts the sessions that are waiting.** The number sits next to the hawk in
+  the menu bar. With nothing waiting, the hawk is dimmed.
+- **Takes you there in one click.** Each waiting session is a row in the menu,
+  named after its repository.
+- **Tells two windows on the same repository apart.** It matches the window by
+  the title Claude Code gave the session, not only by the folder.
+- **Works with Cursor windows merged into macOS tabs** (`window.nativeTabs`).
+  A background tab is not in the window list at all; Hawky finds it in the tab
+  bar and presses it.
+- **Clears itself as soon as the session moves on.** Approving, denying and
+  typing a new prompt all count. An entry nobody cleared expires after ten
+  minutes, so the count never gets stuck.
+- **Launch at Login** and **Check for Updates…** are in the menu.
 
 ## How it works
 
-Claude Code fires a `Notification` hook with `permission_prompt` when it stops to ask. Hawky's hook writes one small file per waiting session to `~/.claude/hawky/pending/`, including the session's title from its transcript. `PostToolUse`, `UserPromptSubmit` and `Stop` remove it again.
+Claude Code fires a `Notification` hook with `permission_prompt` when it stops
+to ask. Hawky's hook writes one small file per waiting session to
+`~/.claude/hawky/pending/`, with the session's title read from the end of its
+transcript. `PostToolUse`, `UserPromptSubmit` and `Stop` delete it again. The app
+watches that folder and does nothing else in the background.
 
-The app watches that folder. When you pick an entry, it looks for the Cursor window whose title starts with the session's title, then for a macOS tab with that title, then for a Cursor tab inside the windows of that repository, and finally for any window of that repository.
+When you pick a row, it looks for the session in this order:
 
-## Build from source
+1. A Cursor window whose title starts with the session's title
+2. A macOS tab with that title, in the tab bar of the front window
+3. A Cursor editor tab with that title, inside the windows of that repository
+4. Any window of that repository
 
-```sh
-python3 scripts/build-icons.py   # only when assets/icon-source.png changes
-./build.sh                       # builds Hawky.app
+## Building and checking
+
+```bash
+./build.sh
+./Hawky.app/Contents/MacOS/Hawky --selftest
 node hook/install.mjs
-open ./Hawky.app
+open Hawky.app
 ```
 
-No Xcode project — `build.sh` calls `swiftc` directly.
+`--selftest` checks the window-matching rules without touching any window. CI
+runs it together with `swift format lint --strict`. Sparkle is fetched into
+`Vendor/` on the first build.
+
+The icon comes from `assets/icon-source.png`. `python3 Tools/make-icon.py` rounds
+it, writes `AppIcon.icns`, and cuts the hawk out as the menu bar template. The
+prompts that produced the artwork are in [docs/art-prompt.md](docs/art-prompt.md).
 
 ## License
 

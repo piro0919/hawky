@@ -31,8 +31,10 @@ enum Focus {
     }
 
     static func reveal(_ pending: Pending) {
-        guard let app = NSRunningApplication
-            .runningApplications(withBundleIdentifier: cursorBundleID).first
+        guard
+            let app =
+                NSRunningApplication
+                .runningApplications(withBundleIdentifier: cursorBundleID).first
         else { return }
 
         // macOS 14 以降は、自分が持っている前面化の権利を明け渡さないと
@@ -48,7 +50,7 @@ enum Focus {
 
         // 1. 最前面のタブがそのセッションなら、ここで終わる
         if !pending.title.isEmpty,
-           let window = openWindows.first(where: { titleMatches(of: $0, pending.title) })
+            let window = openWindows.first(where: { titleMatches(of: $0, pending.title) })
         {
             raise(window, in: axApp)
             return
@@ -59,9 +61,9 @@ enum Focus {
             windowTabs(of: window).map { (window: window, tab: $0) }
         }
         if !pending.title.isEmpty,
-           let hit = nativeTabs.first(where: { entry in
-               string(entry.tab, kAXTitleAttribute as String).map { titleMatches($0, pending.title) } ?? false
-           })
+            let hit = nativeTabs.first(where: { entry in
+                string(entry.tab, kAXTitleAttribute as String).map { titleMatches($0, pending.title) } ?? false
+            })
         {
             press(hit.tab, in: hit.window, of: axApp)
             return
@@ -101,14 +103,14 @@ enum Focus {
     }
 
     /// macOS のタブのボタンは、そのタブの窓の題名をそのまま持つ。窓と同じ規則で見る
-    private static func titleMatches(_ title: String, _ sessionTitle: String) -> Bool {
+    static func titleMatches(_ title: String, _ sessionTitle: String) -> Bool {
         let head = title.components(separatedBy: " — ").first ?? title
         return points(head, at: sessionTitle)
     }
 
     /// 画面に出ている文字列が、そのセッションを指しているか。
     /// 拡張が末尾を `…` に詰めるので、丸ごと一致と前方一致の両方を見る
-    private static func points(_ label: String, at sessionTitle: String) -> Bool {
+    static func points(_ label: String, at sessionTitle: String) -> Bool {
         if label == sessionTitle { return true }
         let stem = label.hasSuffix("…") ? String(label.dropLast()) : label
         return stem.count >= minimumStemLength && sessionTitle.hasPrefix(stem)
@@ -120,7 +122,7 @@ enum Focus {
         return holdsFolder(title, folder)
     }
 
-    private static func holdsFolder(_ title: String, _ folder: String) -> Bool {
+    static func holdsFolder(_ title: String, _ folder: String) -> Bool {
         !folder.isEmpty && title.contains(folder)
     }
 
