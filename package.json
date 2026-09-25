@@ -1,0 +1,8 @@
+{
+  "name": "hawky",
+  "private": true,
+  "scripts": {
+    "lp:dev": "pnpm --filter hawky-lp dev",
+    "lp:build": "pnpm --filter hawky-lp build"
+  }
+}

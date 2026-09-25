@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "title": "Hawky — know when Claude Code is waiting for you",
+    "description": "A Mac menu bar app that counts the Claude Code sessions waiting for permission, and takes you to the right Cursor window in one click."
+  },
+  "hero": {
+    "tagline": "Claude Code is waiting. Hawky noticed.",
+    "lead": "Run Claude Code in a few repositories at once and one of them will stop to ask for permission — silently, in a window you are not looking at. Hawky keeps watch from the menu bar and takes you straight to it.",
+    "download": "Download — free",
+    "requirement": "macOS 14 or later, Apple silicon"
+  },
+  "flow": {
+    "title": "Spot it, then swoop",
+    "steps": [
+      {
+        "title": "A session stops to ask",
+        "body": "Claude Code wants to run a command or edit a file, and waits for your yes."
+      },
+      {
+        "title": "The count shows up",
+        "body": "A number appears next to the hawk in the menu bar. Nothing pops up, nothing steals focus."
+      },
+      {
+        "title": "One click takes you there",
+        "body": "Pick the session from the menu and its Cursor window comes to the front, ready for your answer."
+      }
+    ]
+  },
+  "features": {
+    "title": "What it does",
+    "title_match": {
+      "title": "Finds the right window, not just the right repo",
+      "body": "Two windows on the same repository are told apart by the title Claude Code gave each session. You land on the one that is actually waiting."
+    },
+    "tabs": {
+      "title": "Reaches into macOS tabs",
+      "body": "Merged your Cursor windows into tabs? A background tab is invisible to the window list, so Hawky finds it in the tab bar and presses it for you."
+    },
+    "clears": {
+      "title": "Clears itself",
+      "body": "Approve, deny or type a new prompt and the entry goes away on its own. Anything left behind expires after ten minutes, so the count never gets stuck."
+    },
+    "quiet": {
+      "title": "Just leave it there",
+      "body": "No Dock icon, no window, no account. It watches one folder on your Mac and checks for an update once at launch."
+    }
+  },
+  "install": {
+    "title": "Setting it up",
+    "steps": [
+      {
+        "title": "Install",
+        "body": "Download the DMG and drag Hawky into Applications, or use Homebrew."
+      },
+      {
+        "title": "Let it open",
+        "body": "The author is not a registered Apple developer, so the first launch is blocked. Open System Settings → Privacy & Security and click Open Anyway."
+      },
+      {
+        "title": "Hook it to Claude Code",
+        "body": "Run this once in Terminal. It adds Hawky's hooks to ~/.claude/settings.json and leaves yours alone. Node.js is required."
+      }
+    ],
+    "accessibility": "When Hawky asks for Accessibility access, allow it — that is how it brings windows to the front.",
+    "cta": "Download — free"
+  },
+  "footer": {
+    "source": "Source",
+    "releases": "Past updates",
+    "privacy": "Privacy"
+  },
+  "language": {
+    "ja": "日本語",
+    "en": "English"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: September 26, 2026",
+    "intro": "Hawky notices when Claude Code is waiting for permission and brings the right window to the front. That's the whole app. It has no server, no analytics, and no account.",
+    "sections": [
+      {
+        "title": "What it reads",
+        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting: the session ID, its working folder, the session title from the end of its transcript, and the time. The app reads those files, and the titles of Cursor's windows and tabs so it can find the right one. It does not read your code or your conversations."
+      },
+      {
+        "title": "Nothing leaves the Mac",
+        "body": "Those files live in ~/.claude/hawky/pending and are deleted as soon as the session moves on. Nothing is collected or uploaded. There is nowhere for it to be uploaded to."
+      },
+      {
+        "title": "Update checks go to GitHub",
+        "body": "Hawky checks for a new version once when it starts, not on a timer. The check fetches a small file from its GitHub Releases page, so GitHub sees the request the way it sees any download, including your IP address. It carries nothing about your sessions."
+      },
+      {
+        "title": "No analytics, ever",
+        "body": "There is no crash reporting, no usage tracking, no unique identifier, and no third-party SDK of any kind in the app."
+      },
+      {
+        "title": "You can check all of this",
+        "body": "Hawky is open source under the MIT license, so none of the above has to be taken on trust. Read the source, or open an issue if something looks wrong."
+      },
+      {
+        "title": "Changes",
+        "body": "If a future version starts doing something new with your data, this page gets updated before that version ships."
+      }
+    ],
+    "back": "Back to Hawky"
+  }
+}
