@@ -3,8 +3,9 @@ import ApplicationServices
 
 /// 待っているセッションを画面に出す。
 /// 1. そのセッションが最前面のタブなら、ウィンドウの題名がセッションの題名になる。それで突き合わせる
-/// 2. 背面のタブに居るなら、描画側のツリーを出してタブを押す
-/// 3. 題名で決まらなければ、作業ディレクトリ名だけで突き合わせる
+/// 2. macOS のタブで窓を束ねているなら、背面の窓はタブバーのボタンにしか出ない。それを押す
+/// 3. 背面のタブに居るなら、描画側のツリーを出してタブを押す
+/// 4. 題名で決まらなければ、作業ディレクトリ名だけで突き合わせる
 @MainActor
 enum Focus {
     nonisolated static let cursorBundleID = "com.todesktop.230313mzl4w4u92"
@@ -53,7 +54,20 @@ enum Focus {
             return
         }
 
-        // 2. 背面のタブを探す。作業ディレクトリで絞れるなら絞る
+        // 2. macOS のタブで束ねた背面の窓を探す
+        let nativeTabs = openWindows.flatMap { window in
+            windowTabs(of: window).map { (window: window, tab: $0) }
+        }
+        if !pending.title.isEmpty,
+           let hit = nativeTabs.first(where: { entry in
+               string(entry.tab, kAXTitleAttribute as String).map { titleMatches($0, pending.title) } ?? false
+           })
+        {
+            press(hit.tab, in: hit.window, of: axApp)
+            return
+        }
+
+        // 3. 背面のタブを探す。作業ディレクトリで絞れるなら絞る
         let narrowed = openWindows.filter { holdsFolder($0, pending.folderName) }
         let candidates = narrowed.isEmpty ? openWindows : narrowed
 
@@ -67,9 +81,13 @@ enum Focus {
             }
         }
 
-        // 3. 作業ディレクトリ名だけで突き合わせる（v0.1 の挙動）
+        // 4. 作業ディレクトリ名だけで突き合わせる（v0.1 の挙動）
         if let window = narrowed.first {
             raise(window, in: axApp)
+        } else if let hit = nativeTabs.first(where: { entry in
+            string(entry.tab, kAXTitleAttribute as String).map { holdsFolder($0, pending.folderName) } ?? false
+        }) {
+            press(hit.tab, in: hit.window, of: axApp)
         }
     }
 
@@ -79,6 +97,11 @@ enum Focus {
     /// タブ名の側が長いと拡張が末尾を `…` に詰めるので、前方一致でも拾う
     private static func titleMatches(of window: AXUIElement, _ sessionTitle: String) -> Bool {
         guard let title = string(window, kAXTitleAttribute as String) else { return false }
+        return titleMatches(title, sessionTitle)
+    }
+
+    /// macOS のタブのボタンは、そのタブの窓の題名をそのまま持つ。窓と同じ規則で見る
+    private static func titleMatches(_ title: String, _ sessionTitle: String) -> Bool {
         let head = title.components(separatedBy: " — ").first ?? title
         return points(head, at: sessionTitle)
     }
@@ -93,14 +116,31 @@ enum Focus {
 
     /// フォルダを開いていないウィンドウでは題名に名前が入らない。その場合は絞り込みに使えない
     private static func holdsFolder(_ window: AXUIElement, _ folder: String) -> Bool {
-        guard !folder.isEmpty, let title = string(window, kAXTitleAttribute as String)
-        else { return false }
-        return title.contains(folder)
+        guard let title = string(window, kAXTitleAttribute as String) else { return false }
+        return holdsFolder(title, folder)
+    }
+
+    private static func holdsFolder(_ title: String, _ folder: String) -> Bool {
+        !folder.isEmpty && title.contains(folder)
+    }
+
+    /// macOS のタブで束ねた窓は、最前面のものしか窓の一覧に出ない。
+    /// 残りは窓の上のタブバーに、それぞれの窓の題名を持つボタンとして並ぶ
+    private static func windowTabs(of window: AXUIElement) -> [AXUIElement] {
+        children(window)
+            .filter { string($0, kAXRoleAttribute as String) == (kAXTabGroupRole as String) }
+            .flatMap { children($0) }
+            .filter { string($0, kAXRoleAttribute as String) == (kAXRadioButtonRole as String) }
     }
 
     private static func raise(_ window: AXUIElement, in axApp: AXUIElement) {
         AXUIElementPerformAction(window, kAXRaiseAction as CFString)
         AXUIElementSetAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, window)
+    }
+
+    private static func press(_ tab: AXUIElement, in window: AXUIElement, of axApp: AXUIElement) {
+        raise(window, in: axApp)
+        AXUIElementPerformAction(tab, kAXPressAction as CFString)
     }
 
     // MARK: - 描画側のツリー
