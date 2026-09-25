@@ -25,11 +25,25 @@ enum SelfTest {
         // 拡張は長い題名の末尾を `…` に詰める
         do {
             check(Focus.points("複数リポジトリでの…", at: "複数リポジトリでのエージェント実行"), "詰められた題名は前方一致で当たる")
-            check(Focus.points("複数リポジトリでの", at: "複数リポジトリでのエージェント実行"), "`…` が無くても前方一致で当たる")
+            check(!Focus.points("複数リポジトリでの", at: "複数リポジトリでのエージェント実行"), "`…` が無ければ前方一致では当てない")
+
+            // アクティビティバーの拡張の名前が、たまたま題名の頭と同じになる
+            check(!Focus.points("Vercel", at: "Vercelのコスト削減"), "拡張の名前には当てない")
 
             // 短い断片で前方一致を許すと、似た名前のファイルを開いているだけの窓に当たる
             check(!Focus.points("複数…", at: "複数リポジトリでのエージェント実行"), "6文字未満の断片では当てない")
             check(!Focus.points("README.md", at: "READMEを直す"), "前方一致しなければ当てない")
+        }
+
+        // 窓を左右に分けると、タブの名前にどちらの側かが付く
+        do {
+            check(Focus.tabLabel("新しいサービス考察, エディター グループ 2") == "新しいサービス考察", "日本語の側の名前を落とす")
+            check(Focus.tabLabel("Fix the build, Editor Group 1") == "Fix the build", "英語の側の名前を落とす")
+            check(Focus.tabLabel("新しいサービス考察") == "新しいサービス考察", "側の名前が無ければそのまま")
+            check(Focus.tabLabel("A, B and C") == "A, B and C", "題名の中の読点は残す")
+            check(
+                Focus.points(Focus.tabLabel("複数リポジトリでの…, エディター グループ 2"), at: "複数リポジトリでのエージェント実行"),
+                "詰められた題名に側の名前が付いていても当たる")
         }
 
         // 作業ディレクトリ名での絞り込み

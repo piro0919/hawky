@@ -18,8 +18,13 @@ final class Updater: NSObject, SPUUpdaterDelegate {
     private lazy var controller = SPUStandardUpdaterController(
         startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
 
-    /// 起動時の確認。何も無ければ黙って終わる
+    /// 起動時の確認。何も無ければ黙って終わる。
+    /// 手元のビルドは版数が 0.0.0 なので、公開中のどの版も「新しい」と判断され、
+    /// 起動のたびに更新の画面が出る。その画面が前面を取り、窓を前に出す処理とぶつかって
+    /// いた。手元のビルドでは確かめない。メニューからの確認はそのまま通す
     func checkQuietly() {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        guard version != "0.0.0" else { return }
         controller.updater.checkForUpdateInformation()
     }
 

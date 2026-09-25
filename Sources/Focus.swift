@@ -11,8 +11,9 @@ import ApplicationServices
 enum Focus {
     nonisolated static let cursorBundleID = "com.todesktop.230313mzl4w4u92"
 
-    /// タブの副役割。ApplicationServices は定数を出していないので文字列で持つ
+    /// タブの副役割とウェブ領域の役割。ApplicationServices は定数を出していないので文字列で持つ
     private static let tabButtonSubrole = "AXTabButton"
+    private static let webAreaRole = "AXWebArea"
 
     /// 前方一致に要求する最小の長さ。これより短い断片だと、
     /// たまたま似た名前のファイルを開いているだけの窓に当たる
@@ -22,10 +23,12 @@ enum Focus {
     /// タブの並びに届く前に探索が終わることがあった。1回の探索で見る上限
     private static let visitLimit = 30000
 
-    /// 描画側のツリーが出てくるのを待つ回数と間隔。合わせて1.5秒ほど。
-    /// 手元では、フラグを立ててから0.4〜0.8秒で出てきた
-    private static let rendererAttempts = 10
+    /// 描画側のツリーが出てくるのを待つ間隔と、1つの窓で待つ回数。
+    /// 手元では、フラグを立ててから0.4〜0.8秒で出てきた。1つの窓に0.6秒、
+    /// 裏の窓を3枚まで渡り歩いて、合わせて2.4秒ほどで諦める
     private static let rendererInterval = Duration.milliseconds(150)
+    private static let attemptsPerWindow = 4
+    private static let rendererAttempts = attemptsPerWindow * 4
 
     /// アクセシビリティの許可がないとウィンドウを触れない。
     /// 無ければ設定を開くよう促す（初回だけ出る）
@@ -55,6 +58,7 @@ enum Focus {
         let openWindows = windows(of: axApp)
         guard !openWindows.isEmpty else { return }
 
+        log("reveal title=\(pending.title) windows=\(openWindows.count)")
         // 1. 最前面のタブがそのセッションなら、ここで終わる
         if !pending.title.isEmpty,
             let window = openWindows.first(where: { titleMatches(of: $0, pending.title) })
@@ -84,29 +88,63 @@ enum Focus {
             return
         }
         enableRendererAccessibility(axApp)
-        Task { @MainActor in
-            var broughtTabForward = false
-            for attempt in 0..<rendererAttempts {
-                if pressTab(for: pending, in: axApp) { return }
 
-                // 手前の窓に無ければ、同じフォルダの macOS のタブの裏に居る。
-                // その窓を前に出せば、次の回からツリーに現れる
-                if !broughtTabForward, attempt >= 2,
-                    let hit = nativeTabs.first(where: { entry in
-                        !isSelected(entry.tab)
-                            && (string(entry.tab, kAXTitleAttribute as String).map {
-                                holdsFolder($0, pending.folderName)
-                            } ?? false)
-                    })
-                {
-                    press(hit.tab, in: hit.window, of: axApp)
-                    broughtTabForward = true
+        // 手前の窓に無ければ、macOS のタブの裏の窓に居る。裏の窓はツリーに出ないので、
+        // 前に出してから探すしかない。フォルダ名が窓の名前に入っている窓を先に試す。
+        // ホームのようにフォルダ名が窓の名前に出ない窓もあるので、残りも順に試す
+        let background = nativeTabs.filter { !isSelected($0.tab) }
+        let folderFirst =
+            background.filter { tabHoldsFolder($0.tab, pending.folderName) }
+            + background.filter { !tabHoldsFolder($0.tab, pending.folderName) }
+        let original = nativeTabs.first { isSelected($0.tab) }
+
+        log(
+            "step3 title=\(pending.title) folder=\(pending.folderName) background=\(background.count) original=\(original != nil)"
+        )
+        Task { @MainActor in
+            var queue = folderFirst[...]
+            for attempt in 0..<rendererAttempts {
+                let titles = windows(of: axApp).compactMap { string($0, kAXTitleAttribute as String) }
+                log(
+                    "attempt \(attempt) windows=\(titles) front=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")"
+                )
+                // 押しても効かないことがある。メニューを選んだ直後は Cursor がまだ前面に
+                // 来ておらず、そこで押したタブは選ばれない。押したら窓の名前が題名に
+                // 変わったかを確かめ、変わっていなければ次の回で押し直す
+                if pressTab(for: pending, in: axApp) {
+                    log("pressed at attempt \(attempt)")
+                    try? await Task.sleep(for: rendererInterval)
+                    if windows(of: axApp).contains(where: { titleMatches(of: $0, pending.title) }) {
+                        log("front window now matches")
+                        return
+                    }
+                    continue
+                }
+
+                // ツリーが出てくるのを少し待ってから、次の窓へ移る
+                if attempt % attemptsPerWindow == attemptsPerWindow - 1, let next = queue.popFirst() {
+                    log("bring forward \(string(next.tab, kAXTitleAttribute as String) ?? "?")")
+                    press(next.tab, in: next.window, of: axApp)
                 }
                 try? await Task.sleep(for: rendererInterval)
+            }
+            // 見つからなかった。裏の窓を渡り歩いたなら、元の窓に戻してから
+            if folderFirst.count > queue.count, let original {
+                press(original.tab, in: original.window, of: axApp)
             }
             // 4. 題名で決まらなかった
             raiseByFolder(pending, in: axApp, nativeTabs: nativeTabs)
         }
+    }
+
+    /// `--diag` を付けて起動したときだけ、探す段ごとの結果を標準エラーに書く
+    private static func log(_ text: @autoclosure () -> String) {
+        guard CommandLine.arguments.contains("--diag") else { return }
+        FileHandle.standardError.write(Data("focus: \(text())\n".utf8))
+    }
+
+    private static func tabHoldsFolder(_ tab: AXUIElement, _ folder: String) -> Bool {
+        string(tab, kAXTitleAttribute as String).map { holdsFolder($0, folder) } ?? false
     }
 
     /// 開いている窓の中から、題名がそのセッションのタブを探して押す。作業ディレクトリで絞れるなら絞る
@@ -115,6 +153,9 @@ enum Focus {
         let narrowed = openWindows.filter { holdsFolder($0, pending.folderName) }
         for window in narrowed.isEmpty ? openWindows : narrowed {
             guard let tab = findTab(in: window, titled: pending.title) else { continue }
+            log(
+                "found \(string(tab, kAXRoleAttribute as String) ?? "")/\(string(tab, kAXSubroleAttribute as String) ?? "") [\(string(tab, kAXDescriptionAttribute as String) ?? string(tab, kAXTitleAttribute as String) ?? "")]"
+            )
             raise(window, in: axApp)
             AXUIElementPerformAction(tab, kAXPressAction as CFString)
             return true
@@ -151,10 +192,13 @@ enum Focus {
     }
 
     /// 画面に出ている文字列が、そのセッションを指しているか。
-    /// 拡張が末尾を `…` に詰めるので、丸ごと一致と前方一致の両方を見る
+    /// 拡張は長い題名の末尾を `…` に詰めるので、`…` で終わるものだけ前方一致で見る。
+    /// `…` の無い前方一致まで許すと、アクティビティバーの「Vercel」が
+    /// 「Vercelのコスト削減」に当たり、タブの代わりに拡張の画面を開いていた
     static func points(_ label: String, at sessionTitle: String) -> Bool {
         if label == sessionTitle { return true }
-        let stem = label.hasSuffix("…") ? String(label.dropLast()) : label
+        guard label.hasSuffix("…") else { return false }
+        let stem = String(label.dropLast())
         return stem.count >= minimumStemLength && sessionTitle.hasPrefix(stem)
     }
 
@@ -200,13 +244,14 @@ enum Focus {
     /// 幅優先で、見る数を区切って探す。
     /// セッションの題名は拡張のヘッダーにも出るので、タブだと分かる要素を優先する
     private static func findTab(in window: AXUIElement, titled sessionTitle: String) -> AXUIElement? {
-        // 先頭を取り出して詰め直すと要素数の二乗になる。読む位置だけ進める
-        var queue = [window]
+        // 先頭を取り出して詰め直すと要素数の二乗になる。読む位置だけ進める。
+        // 各要素には、ウェブ領域の内側に居るかを添えて積む
+        var queue: [(element: AXUIElement, insideWeb: Bool)] = [(window, false)]
         var cursor = 0
         var fallback: AXUIElement?
 
         while cursor < queue.count, cursor < visitLimit {
-            let element = queue[cursor]
+            let (element, insideWeb) = queue[cursor]
             cursor += 1
 
             let subrole = string(element, kAXSubroleAttribute as String)
@@ -214,7 +259,14 @@ enum Focus {
                 if subrole == tabButtonSubrole { return element }
                 if fallback == nil { fallback = element }
             }
-            queue.append(contentsOf: children(element))
+
+            // Cursor 本体の画面は1枚のウェブ領域で、その中に拡張機能の画面が
+            // ウェブ領域として入れ子になる。Claude Code のチャット欄は会話の分だけ
+            // 要素が増え、1万を超えて探索に3秒近くかかっていた。タブのボタンは本体の側に
+            // あるので、入れ子の方には入らない。手元の窓で 3556 番目が 150 番目になった
+            let isWeb = string(element, kAXRoleAttribute as String) == webAreaRole
+            if isWeb, insideWeb { continue }
+            queue.append(contentsOf: children(element).map { ($0, insideWeb || isWeb) })
         }
         return fallback
     }
@@ -228,9 +280,19 @@ enum Focus {
     private static func labelMatches(_ element: AXUIElement, _ sessionTitle: String) -> Bool {
         for attribute in [kAXTitleAttribute, kAXDescriptionAttribute] as [String] {
             guard let label = string(element, attribute), !label.isEmpty else { continue }
-            if points(label, at: sessionTitle) { return true }
+            if points(tabLabel(label), at: sessionTitle) { return true }
         }
         return false
+    }
+
+    /// 窓を左右に分けていると、タブの名前の末尾にどちらの側かが付く。
+    /// 「新しいサービス考察, エディター グループ 2」「…, Editor Group 2」のように、
+    /// 読点の後ろが数字で終わる。そこを落として題名だけにする
+    static func tabLabel(_ label: String) -> String {
+        guard let range = label.range(of: ", ", options: .backwards),
+            label[range.upperBound...].last?.isNumber == true
+        else { return label }
+        return String(label[..<range.lowerBound])
     }
 
     // MARK: - AX の細かい取り回し
