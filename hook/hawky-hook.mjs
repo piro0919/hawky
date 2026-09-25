@@ -63,6 +63,36 @@ function sessionTitle(path) {
   return "";
 }
 
+// セッションを開いたときのフォルダ。フックに来る cwd はその時点のシェルの居場所で、
+// セッションの途中で cd すると別のリポジトリを指す。Cursor の窓が開いているのは
+// 開いたときのフォルダなので、窓を探すにも一覧に出すにもこちらを使う。
+// transcript の各行が cwd を持っていて、最初の行がそれにあたる
+function projectFolder(path) {
+  if (!path) return "";
+  let fd;
+  try {
+    fd = openSync(path, "r");
+    const length = Math.min(fstatSync(fd).size, 256 * 1024);
+    const buffer = Buffer.alloc(length);
+    readSync(fd, buffer, 0, length, 0);
+
+    for (const line of buffer.toString("utf8").split("\n")) {
+      if (!line.includes('"cwd"')) continue;
+      try {
+        const record = JSON.parse(line);
+        if (record.cwd) return String(record.cwd);
+      } catch {
+        // 読んだ範囲の末尾の1行は途中で切れている。落ちるのは織り込み済み
+      }
+    }
+  } catch {
+    return "";
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+  return "";
+}
+
 const file = join(dir, `${id}.json`);
 if (mode === "add") {
   mkdirSync(dir, { recursive: true });
@@ -71,6 +101,7 @@ if (mode === "add") {
     JSON.stringify({
       session_id: id,
       cwd: input.cwd ?? "",
+      project: projectFolder(input.transcript_path) || input.cwd || "",
       title: sessionTitle(input.transcript_path),
       at: Math.floor(Date.now() / 1000),
     }),

@@ -4,7 +4,8 @@ import ApplicationServices
 /// 待っているセッションを画面に出す。
 /// 1. そのセッションが最前面のタブなら、ウィンドウの題名がセッションの題名になる。それで突き合わせる
 /// 2. macOS のタブで窓を束ねているなら、背面の窓はタブバーのボタンにしか出ない。それを押す
-/// 3. 背面のタブに居るなら、描画側のツリーを出してタブを押す
+/// 3. 背面のタブに居るなら、描画側のツリーを出してタブを押す。ツリーが出るまで待って探し直し、
+///    手前の窓に無ければ同じフォルダの macOS のタブを前に出してから探す
 /// 4. 題名で決まらなければ、作業ディレクトリ名だけで突き合わせる
 @MainActor
 enum Focus {
@@ -17,8 +18,14 @@ enum Focus {
     /// たまたま似た名前のファイルを開いているだけの窓に当たる
     private static let minimumStemLength = 6
 
-    /// ツリーは数千要素になる。1回の探索で見る上限
-    private static let visitLimit = 6000
+    /// ツリーは大きな窓で8000要素を超える。6000で打ち切っていた頃は、
+    /// タブの並びに届く前に探索が終わることがあった。1回の探索で見る上限
+    private static let visitLimit = 30000
+
+    /// 描画側のツリーが出てくるのを待つ回数と間隔。合わせて1.5秒ほど。
+    /// 手元では、フラグを立ててから0.4〜0.8秒で出てきた
+    private static let rendererAttempts = 10
+    private static let rendererInterval = Duration.milliseconds(150)
 
     /// アクセシビリティの許可がないとウィンドウを触れない。
     /// 無ければ設定を開くよう促す（初回だけ出る）
@@ -69,22 +76,57 @@ enum Focus {
             return
         }
 
-        // 3. 背面のタブを探す。作業ディレクトリで絞れるなら絞る
-        let narrowed = openWindows.filter { holdsFolder($0, pending.folderName) }
-        let candidates = narrowed.isEmpty ? openWindows : narrowed
-
-        if !pending.title.isEmpty {
-            enableRendererAccessibility(axApp)
-            for window in candidates {
-                guard let tab = findTab(in: window, titled: pending.title) else { continue }
-                raise(window, in: axApp)
-                AXUIElementPerformAction(tab, kAXPressAction as CFString)
-                return
-            }
+        // 3. 背面のタブを探す。描画側のツリーは、フラグを立ててから出てくるまでに
+        //    間がある。すぐ探すと空振りして、1回目のクリックでは窓が前に出るだけになる。
+        //    出てくるまで少しずつ待って探し直す
+        guard !pending.title.isEmpty else {
+            raiseByFolder(pending, in: axApp, nativeTabs: nativeTabs)
+            return
         }
+        enableRendererAccessibility(axApp)
+        Task { @MainActor in
+            var broughtTabForward = false
+            for attempt in 0..<rendererAttempts {
+                if pressTab(for: pending, in: axApp) { return }
 
-        // 4. 作業ディレクトリ名だけで突き合わせる（v0.1 の挙動）
-        if let window = narrowed.first {
+                // 手前の窓に無ければ、同じフォルダの macOS のタブの裏に居る。
+                // その窓を前に出せば、次の回からツリーに現れる
+                if !broughtTabForward, attempt >= 2,
+                    let hit = nativeTabs.first(where: { entry in
+                        !isSelected(entry.tab)
+                            && (string(entry.tab, kAXTitleAttribute as String).map {
+                                holdsFolder($0, pending.folderName)
+                            } ?? false)
+                    })
+                {
+                    press(hit.tab, in: hit.window, of: axApp)
+                    broughtTabForward = true
+                }
+                try? await Task.sleep(for: rendererInterval)
+            }
+            // 4. 題名で決まらなかった
+            raiseByFolder(pending, in: axApp, nativeTabs: nativeTabs)
+        }
+    }
+
+    /// 開いている窓の中から、題名がそのセッションのタブを探して押す。作業ディレクトリで絞れるなら絞る
+    private static func pressTab(for pending: Pending, in axApp: AXUIElement) -> Bool {
+        let openWindows = windows(of: axApp)
+        let narrowed = openWindows.filter { holdsFolder($0, pending.folderName) }
+        for window in narrowed.isEmpty ? openWindows : narrowed {
+            guard let tab = findTab(in: window, titled: pending.title) else { continue }
+            raise(window, in: axApp)
+            AXUIElementPerformAction(tab, kAXPressAction as CFString)
+            return true
+        }
+        return false
+    }
+
+    /// 作業ディレクトリ名だけで突き合わせる（v0.1 の挙動）
+    private static func raiseByFolder(
+        _ pending: Pending, in axApp: AXUIElement, nativeTabs: [(window: AXUIElement, tab: AXUIElement)]
+    ) {
+        if let window = windows(of: axApp).first(where: { holdsFolder($0, pending.folderName) }) {
             raise(window, in: axApp)
         } else if let hit = nativeTabs.first(where: { entry in
             string(entry.tab, kAXTitleAttribute as String).map { holdsFolder($0, pending.folderName) } ?? false
@@ -200,6 +242,14 @@ enum Focus {
             let windows = raw as? [AXUIElement]
         else { return [] }
         return windows
+    }
+
+    /// タブのボタンは、選ばれているときに値が 1 になる
+    private static func isSelected(_ element: AXUIElement) -> Bool {
+        var raw: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &raw) == .success
+        else { return false }
+        return (raw as? Int) == 1
     }
 
     private static func children(_ element: AXUIElement) -> [AXUIElement] {

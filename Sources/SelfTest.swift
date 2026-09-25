@@ -46,6 +46,17 @@ enum SelfTest {
 
             let nowhere = Pending(sessionID: "abcdef123456", cwd: "", title: "", at: Date())
             check(nowhere.label == "abcdef12", "作業ディレクトリが無ければセッションIDの頭8文字")
+
+            // 1つの窓に複数のセッションがあると、フォルダ名だけでは行が同じになる
+            let titled = Pending(
+                sessionID: "abcdef123456", cwd: "/Users/me/Repository/hawky", title: "状況確認", at: Date())
+            check(titled.label == "状況確認 — hawky", "題名があれば窓の名前と同じ形で出す")
+
+            let long = Pending(
+                sessionID: "abcdef123456", cwd: "/Users/me/Repository/hawky",
+                title: String(repeating: "あ", count: 50), at: Date())
+            check(long.label.hasSuffix("… — hawky"), "長い題名は詰める")
+            check(long.label.count == Pending.titleLimit + 1 + " — hawky".count, "詰めた題名は上限の長さ")
         }
 
         print(failures == 0 ? "selftest: ok" : "selftest: \(failures) failed")
