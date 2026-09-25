@@ -38,14 +38,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         watcher = source
     }
 
+    /// 鷹の影絵。テンプレート画像にして、明暗の色付けは macOS に任せる
+    private let statusIcon: NSImage? = {
+        guard let image = NSImage(named: "StatusIcon") else { return nil }
+        image.isTemplate = true
+        image.size = NSSize(width: 18, height: 18)
+        image.accessibilityDescription = Strings.statusDescription
+        return image
+    }()
+
     private func refresh() {
         pending = Store.load()
         let count = pending.count
         guard let button = item.button else { return }
-        button.image = NSImage(
-            systemSymbolName: count > 0 ? "hand.raised.fill" : "hand.raised",
-            accessibilityDescription: "Claude Code の許可待ち"
-        )
+        button.image = statusIcon
+        // 待ちが無いときは影絵を薄くして、あるときとの違いを件数以外でも見せる
+        button.appearsDisabled = count == 0
         button.title = count > 0 ? " \(count)" : ""
     }
 
@@ -54,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.removeAllItems()
 
         if pending.isEmpty {
-            let empty = NSMenuItem(title: "許可待ちはありません", action: nil, keyEquivalent: "")
+            let empty = NSMenuItem(title: Strings.nothingWaiting, action: nil, keyEquivalent: "")
             empty.isEnabled = false
             menu.addItem(empty)
         } else {
@@ -68,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "終了", action: #selector(quit), keyEquivalent: "q")
+        let quit = NSMenuItem(title: Strings.quit, action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
     }

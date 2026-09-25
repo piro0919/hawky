@@ -26,7 +26,10 @@ swiftc \
   -framework AppKit \
   -framework ApplicationServices \
   -o "$APP/Contents/MacOS/Hawky" \
-  Sources/Paths.swift Sources/Store.swift Sources/Focus.swift Sources/main.swift
+  Sources/Paths.swift Sources/Store.swift Sources/Focus.swift Sources/Strings.swift Sources/main.swift
+
+# アイコンは scripts/build-icons.py で書き出したもの
+cp Resources/AppIcon.icns Resources/StatusIcon.png Resources/StatusIcon@2x.png "$APP/Contents/Resources/"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -37,6 +40,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>Hawky</string>
   <key>CFBundleExecutable</key><string>Hawky</string>
   <key>CFBundleIdentifier</key><string>io.kkweb.hawky</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>
