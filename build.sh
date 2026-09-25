@@ -31,6 +31,11 @@ swiftc \
 # アイコンは scripts/build-icons.py で書き出したもの
 cp Resources/AppIcon.icns Resources/StatusIcon.png Resources/StatusIcon@2x.png "$APP/Contents/Resources/"
 
+# ダウンロードした人がリポジトリなしでフックを登録できるよう、アプリに同梱する。
+# install.mjs は自分の置き場所の隣にある hawky-hook.mjs を登録する
+mkdir -p "$APP/Contents/Resources/hook"
+cp hook/hawky-hook.mjs hook/install.mjs "$APP/Contents/Resources/hook/"
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
