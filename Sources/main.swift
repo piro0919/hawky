@@ -18,7 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.menu?.delegate = self
         startWatching()
         // 期限切れの待ちを落とすため、変化が無くても定期的に見直す
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        // 許可されたか、Claude Code が終わったかは、フックでは知らせが来ない。
+        // ファイルの変化を待たずに、3秒ごとに見直す
+        timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
             // Timer は主の実行ループから呼ぶ。飛ばずに入り、違ったら落とす
             MainActor.assumeIsolated { self?.refresh() }
         }

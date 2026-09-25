@@ -74,7 +74,33 @@ enum Store {
     static func isStale(at: Date, pid: Int32, now: Date = Date()) -> Bool {
         let age = now.timeIntervalSince(at)
         guard pid > 0 else { return age > expiryWithoutProcess }
-        return age > expiryWithProcess || !isAlive(pid)
+        return age > expiryWithProcess || !isAlive(pid) || startedWork(pid, since: at)
+    }
+
+    /// 許可されたか。Claude Code には「許可された」ときに届くフックが無く、届くのは
+    /// コマンドが終わったときの PostToolUse だけ。長く動くコマンドだと、許可したあとも
+    /// 終わるまで待ちとして数え続けていた。許可されるとコマンドを動かすシェルが
+    /// Claude Code の子として起動するので、待ちが始まったあとに起動した子が居れば
+    /// 許可されたとみなす。MCP のサーバーや裏で動かしている開発サーバーは、
+    /// 待ちより前に起動しているので当たらない。待ちを書いたフック自身も子として
+    /// 起動するので、その分として2秒の猶予を置く
+    static func startedWork(_ pid: Int32, since at: Date) -> Bool {
+        let threshold = Int(at.timeIntervalSince1970) + 2
+        return childStartTimes(of: pid).contains { $0 >= threshold }
+    }
+
+    /// 子のプロセスが起動した時刻（秒）
+    static func childStartTimes(of pid: Int32) -> [Int] {
+        var children = [Int32](repeating: 0, count: 256)
+        let count = proc_listchildpids(pid, &children, Int32(children.count * MemoryLayout<Int32>.size))
+        guard count > 0 else { return [] }
+        return children.prefix(Int(count)).compactMap { child in
+            guard child > 0 else { return nil }
+            var info = proc_bsdinfo()
+            let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+            guard proc_pidinfo(child, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
+            return Int(info.pbi_start_tvsec)
+        }
     }
 
     /// そのプロセスが居るか。シグナル 0 は何も送らずに、居るかどうかだけを返す。

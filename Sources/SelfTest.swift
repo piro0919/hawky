@@ -62,6 +62,16 @@ enum SelfTest {
             check(Store.isStale(at: now.addingTimeInterval(-25 * 60 * 60), pid: me, now: now), "生きていても24時間たてば捨てる")
             check(!Store.isStale(at: now.addingTimeInterval(-30 * 60), pid: 0, now: now), "番号が無ければ1時間までは残す")
             check(Store.isStale(at: now.addingTimeInterval(-61 * 60), pid: 0, now: now), "番号が無ければ1時間で捨てる")
+
+            // 許可されてコマンドが動き出したら、終わるのを待たずに消す
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: "/bin/sleep")
+            child.arguments = ["5"]
+            let before = Date().addingTimeInterval(-10)
+            try? child.run()
+            check(Store.startedWork(getpid(), since: before), "待ちのあとに起動した子が居れば、許可されたとみなす")
+            check(!Store.startedWork(getpid(), since: Date().addingTimeInterval(60)), "待ちより前に起動した子では、許可されたとみなさない")
+            child.terminate()
         }
 
         // 一覧に出す名前
