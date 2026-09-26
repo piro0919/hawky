@@ -45,20 +45,23 @@ Claude Code のフックを使う。
 
 ```sh
 ./build.sh          # Hawky.app ができる
-node hook/install.mjs   # ~/.claude/settings.json にフックを登録する
-open ./Hawky.app
+open ./Hawky.app    # メニューの「Claude Code に接続」でフックを登録する
 ```
 
 初回はアクセシビリティの許可を求められる。ウィンドウを前面に出すために要る。
 
-外すとき:
+フックは Hawky の実行ファイルそのもの（`Hawky hook add` / `Hawky hook clear`、`Sources/Hook.swift`）。
+以前は Node のスクリプトで、Node の無い Mac では動かなかった。登録は `Sources/Connection.swift` が
+`~/.claude/settings.json` を書き換える。Foundation の JSONSerialization はキーの並びを保たないので、
+並びを保つ `JSONValue` を自前で持ち、書き出しは Node の `JSON.stringify(v, null, 2)` と同じ形にしてある
+（手元の settings.json を読んで書き戻すと1文字も変わらないことを確かめた）。
 
-```sh
-node hook/install.mjs --remove
-```
+`hook/` の Node 版は、v0.1.x で `install.mjs` を叩いた人のフックが壊れないよう、アプリに同梱し続けている。
+メニューから接続し直すと Node 版のフックは外れる。
 
-`hook/` の2つはアプリの `Contents/Resources/hook/` にも入る。配布版を使う人はそちらの
-`install.mjs` を叩く。登録されるフックの場所は `install.mjs` の隣になる。
+待ちの記録には、フックが環境変数 `__CFBundleIdentifier` から拾った起動元のアプリの ID が入る。
+Cursor なら `com.todesktop.230313mzl4w4u92`、VS Code なら `com.microsoft.VSCode`。窓を探すアプリはこれで決める。
+VS Code も窓の名前の区切りは Cursor と同じ ` — ` だった（実測）。VS Code の試し開きのタブは名前に「, preview」が付く。
 
 ## アイコン
 

@@ -6,6 +6,9 @@ enum Strings {
 
     static let statusDescription = japanese ? "Claude Code の許可待ち" : "Claude Code waiting for permission"
     static let nothingWaiting = japanese ? "許可待ちはありません" : "Nothing is waiting"
+    static let connect = japanese ? "Claude Code に接続" : "Connect to Claude Code"
+    static let connectFailed =
+        japanese ? "Claude Code の設定ファイルを書き換えられませんでした" : "Could not update Claude Code's settings file"
     static let launchAtLogin = japanese ? "ログイン時に起動" : "Launch at Login"
     static let checkForUpdates = japanese ? "アップデートを確認…" : "Check for Updates…"
     static let quit = japanese ? "終了" : "Quit Hawky"

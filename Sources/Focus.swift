@@ -11,6 +11,10 @@ import ApplicationServices
 enum Focus {
     nonisolated static let cursorBundleID = "com.todesktop.230313mzl4w4u92"
 
+    /// 窓の名前の区切り。Cursor は `<タブ> — <フォルダ>`、VS Code は `<タブ> - <フォルダ> - Visual Studio Code`。
+    /// 題名そのものに ` - ` が入ることもあるので、最初の区切りの前だけを題名の側とみなす
+    static let titleSeparators = [" — ", " - "]
+
     /// タブの副役割とウェブ領域の役割。ApplicationServices は定数を出していないので文字列で持つ
     private static let tabButtonSubrole = "AXTabButton"
     private static let webAreaRole = "AXWebArea"
@@ -44,7 +48,7 @@ enum Focus {
         guard
             let app =
                 NSRunningApplication
-                .runningApplications(withBundleIdentifier: cursorBundleID).first
+                .runningApplications(withBundleIdentifier: pending.app.isEmpty ? cursorBundleID : pending.app).first
         else { return }
 
         // macOS 14 以降は、自分が持っている前面化の権利を明け渡さないと
@@ -187,7 +191,10 @@ enum Focus {
 
     /// macOS のタブのボタンは、そのタブの窓の題名をそのまま持つ。窓と同じ規則で見る
     static func titleMatches(_ title: String, _ sessionTitle: String) -> Bool {
-        let head = title.components(separatedBy: " — ").first ?? title
+        // 題名の側に区切りと同じ文字が入っていることもある。題名で始まるなら丸ごと当てる
+        if title == sessionTitle { return true }
+        for separator in titleSeparators where title.hasPrefix(sessionTitle + separator) { return true }
+        let head = titleSeparators.reduce(title) { $0.components(separatedBy: $1).first ?? $0 }
         return points(head, at: sessionTitle)
     }
 
@@ -285,15 +292,20 @@ enum Focus {
         return false
     }
 
-    /// 窓を左右に分けていると、タブの名前の末尾にどちらの側かが付く。
-    /// 「新しいサービス考察, エディター グループ 2」「…, Editor Group 2」のように、
-    /// 読点の後ろが数字で終わる。そこを落として題名だけにする
+    /// タブの名前の末尾には、題名のほかに状態が付くことがある。比べる前に落として題名だけにする。
+    /// 窓を左右に分けているとどちらの側か（「, エディター グループ 2」「, Editor Group 2」）、
+    /// VS Code で試しに開いた状態なら「, preview」が付く。両方付くこともある
     static func tabLabel(_ label: String) -> String {
-        guard let range = label.range(of: ", ", options: .backwards),
-            label[range.upperBound...].last?.isNumber == true
-        else { return label }
-        return String(label[..<range.lowerBound])
+        var text = label
+        while let range = text.range(of: ", ", options: .backwards) {
+            let tail = text[range.upperBound...]
+            guard tail.last?.isNumber == true || previewMarks.contains(String(tail)) else { break }
+            text = String(text[..<range.lowerBound])
+        }
+        return text
     }
+
+    private static let previewMarks: Set<String> = ["preview", "プレビュー"]
 
     // MARK: - AX の細かい取り回し
 

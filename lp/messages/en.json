@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Hawky — know when Claude Code is waiting for you",
-    "description": "A Mac menu bar app that counts the Claude Code sessions waiting for permission, and takes you to the right Cursor window in one click."
+    "description": "A Mac menu bar app that counts the Claude Code sessions waiting for permission, and takes you to the right Cursor or VS Code window in one click."
   },
   "hero": {
     "tagline": "Claude Code is waiting. Hawky noticed.",
@@ -22,7 +22,7 @@
       },
       {
         "title": "One click takes you there",
-        "body": "Pick the session from the menu and its Cursor window comes to the front, ready for your answer."
+        "body": "Pick the session from the menu and its Cursor or VS Code tab comes to the front, ready for your answer."
       }
     ]
   },
@@ -34,7 +34,7 @@
     },
     "tabs": {
       "title": "Reaches into macOS tabs",
-      "body": "Merged your Cursor windows into tabs? A background tab is invisible to the window list, so Hawky finds it in the tab bar and presses it for you."
+      "body": "Merged your editor windows into tabs? A background tab is invisible to the window list, so Hawky finds it in the tab bar and presses it for you."
     },
     "clears": {
       "title": "Clears itself",
@@ -57,8 +57,8 @@
         "body": "The author is not a registered Apple developer, so the first launch is blocked. Open System Settings → Privacy & Security and click Open Anyway."
       },
       {
-        "title": "Hook it to Claude Code",
-        "body": "Run this once in Terminal. It adds Hawky's hooks to ~/.claude/settings.json and leaves yours alone. Node.js is required."
+        "title": "Connect it to Claude Code",
+        "body": "Open Hawky's menu and choose Connect to Claude Code. It adds Hawky's hooks to ~/.claude/settings.json and leaves everything else as it is. Nothing else needs to be installed."
       }
     ],
     "accessibility": "When Hawky asks for Accessibility access, allow it — that is how it brings windows to the front.",
@@ -80,7 +80,7 @@
     "sections": [
       {
         "title": "What it reads",
-        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting: the session ID, the folder it was opened in, the session title from the end of its transcript, the ID of its Claude Code process, and the time. The app reads those files, and the titles of Cursor's windows and tabs so it can find the right one. It does not read your code or your conversations."
+        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting: the session ID, the folder it was opened in, the session title from the end of its transcript, the ID of its Claude Code process, the app it runs in, and the time. The app reads those files, and the titles of Cursor's and VS Code's windows and tabs so it can find the right one. It does not read your code or your conversations."
       },
       {
         "title": "Nothing leaves the Mac",

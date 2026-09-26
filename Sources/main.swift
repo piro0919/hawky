@@ -17,7 +17,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.menu = NSMenu()
         item.menu?.delegate = self
         startWatching()
-        // 期限切れの待ちを落とすため、変化が無くても定期的に見直す
         // 許可されたか、Claude Code が終わったかは、フックでは知らせが来ない。
         // ファイルの変化を待たずに、3秒ごとに見直す
         timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
@@ -81,6 +80,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menu.addItem(.separator())
 
+        let connect = NSMenuItem(title: Strings.connect, action: #selector(toggleConnection), keyEquivalent: "")
+        connect.target = self
+        connect.state = Connection.isConnected ? .on : .off
+        menu.addItem(connect)
+
         let login = NSMenuItem(title: Strings.launchAtLogin, action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
         login.target = self
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -109,6 +113,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// フックの登録と解除。設定ファイルが読めないなど、書き換えられなければ理由を出す
+    @objc private func toggleConnection() {
+        do {
+            if Connection.isConnected { try Connection.disconnect() } else { try Connection.connect() }
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = Strings.connectFailed
+            alert.informativeText = Connection.settingsURL.path
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
+    }
+
     @objc private func checkForUpdates() { Updater.shared.checkNow() }
 
     @objc private func revealPending(_ sender: NSMenuItem) {
@@ -125,6 +142,11 @@ extension AppDelegate: NSMenuDelegate {
         refresh()
         rebuildMenu()
     }
+}
+
+// Claude Code のフックとして呼ばれた。画面は出さずに、待ちのファイルを書くか消すだけで終わる
+if CommandLine.arguments.count > 1, CommandLine.arguments[1] == "hook" {
+    exit(Hook.run(Array(CommandLine.arguments.dropFirst(2))))
 }
 
 if CommandLine.arguments.contains("--selftest") {

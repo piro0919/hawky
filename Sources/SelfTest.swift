@@ -16,6 +16,14 @@ enum SelfTest {
             check(Focus.titleMatches("状況確認", "状況確認"), "フォルダ名が無い窓でも比べられる")
             check(!Focus.titleMatches("別の作業 — koidamashii", "状況確認"), "題名が違えば当たらない")
 
+            // VS Code は区切りが ` - ` で、末尾にアプリ名が付く
+            check(
+                Focus.titleMatches("状況確認 - koidamashii - Visual Studio Code", "状況確認"),
+                "VS Code の窓の名前でも当たる")
+            check(
+                Focus.titleMatches("A - B の比較 - hawky - Visual Studio Code", "A - B の比較"),
+                "題名に ` - ` が入っていても当たる")
+
             // macOS のタブのボタンは窓の題名をそのまま持つので、同じ規則で当たる
             check(
                 Focus.titleMatches("Cursor の窓をタブにまとめる — hawky", "Cursor の窓をタブにまとめる"),
@@ -41,6 +49,8 @@ enum SelfTest {
             check(Focus.tabLabel("Fix the build, Editor Group 1") == "Fix the build", "英語の側の名前を落とす")
             check(Focus.tabLabel("新しいサービス考察") == "新しいサービス考察", "側の名前が無ければそのまま")
             check(Focus.tabLabel("A, B and C") == "A, B and C", "題名の中の読点は残す")
+            check(Focus.tabLabel("Welcome, preview") == "Welcome", "VS Code の試し開きの印を落とす")
+            check(Focus.tabLabel("状況確認, preview, Editor Group 2") == "状況確認", "両方付いていても落とす")
             check(
                 Focus.points(Focus.tabLabel("複数リポジトリでの…, エディター グループ 2"), at: "複数リポジトリでのエージェント実行"),
                 "詰められた題名に側の名前が付いていても当たる")
@@ -51,6 +61,63 @@ enum SelfTest {
             check(Focus.holdsFolder("状況確認 — koidamashii", "koidamashii"), "題名にフォルダ名があれば当たる")
             check(!Focus.holdsFolder("状況確認 — koidamashii", ""), "フォルダ名が空なら当てない")
             check(!Focus.holdsFolder("状況確認", "koidamashii"), "フォルダを開いていない窓には当てない")
+        }
+
+        // 設定ファイルの読み書き。並びも書き方も Node の JSON.stringify(v, null, 2) と同じに戻る
+        do {
+            let text = """
+                {
+                  "b": 1,
+                  "a": [
+                    "日本語/そのまま",
+                    true,
+                    null,
+                    -1.5e3
+                  ],
+                  "c": {},
+                  "d": [],
+                  "e": "quote \\" and \\\\ and \\n"
+                }
+                """
+            let parsed = try? JSONValue.parse(text)
+            check(parsed?.serialized() == text, "読んで書き戻すと元と同じになる")
+            check((try? JSONValue.parse("{\"a\": }")) == nil, "壊れた JSON は読まない")
+        }
+
+        // フックの登録
+        do {
+            let exe = "/Applications/Hawky.app/Contents/MacOS/Hawky"
+            let before = try! JSONValue.parse(
+                """
+                {
+                  "theme": "dark",
+                  "hooks": {
+                    "PreToolUse": [
+                      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node check.mjs" }] }
+                    ],
+                    "Stop": [
+                      { "hooks": [{ "type": "command", "command": "node '/x/hook/hawky-hook.mjs' clear" }] }
+                    ]
+                  }
+                }
+                """)
+            let connected = Connection.updated(before, connecting: true, executable: exe)
+            let commands = (connected["hooks"]?["Stop"]?.arrayValue ?? []).flatMap {
+                ($0["hooks"]?.arrayValue ?? []).compactMap { $0["command"]?.stringValue }
+            }
+            check(commands == ["'\(exe)' hook clear"], "Node 時代のフックを外して入れ替える")
+            check(
+                connected["hooks"]?["PreToolUse"]?.arrayValue?.count == 1
+                    && connected["hooks"]?["PreToolUse"]?.arrayValue?.first?["matcher"]?.stringValue == "Bash",
+                "ほかのフックは残す")
+            check(connected["theme"]?.stringValue == "dark", "フック以外の設定は残す")
+            check(
+                Connection.updated(connected, connecting: true, executable: exe) == connected,
+                "何度つないでも同じになる")
+
+            let disconnected = Connection.updated(connected, connecting: false, executable: exe)
+            check(disconnected["hooks"]?["Stop"] == nil, "外すと空になった項目ごと消える")
+            check(disconnected["hooks"]?["PreToolUse"] != nil, "外してもほかのフックは残す")
         }
 
         // 待ちを捨てる決まり

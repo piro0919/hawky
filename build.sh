@@ -49,6 +49,7 @@ swiftc \
   -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
   -o "$APP/Contents/MacOS/Hawky" \
   Sources/Paths.swift Sources/Store.swift Sources/Focus.swift Sources/Strings.swift \
+  Sources/JSONValue.swift Sources/Hook.swift Sources/Connection.swift \
   Sources/Updater.swift Sources/SelfTest.swift Sources/main.swift
 
 # アイコンは Tools/make-icon.py で書き出したもの

@@ -126,6 +126,8 @@ if (mode === "add") {
       project: projectFolder(input.transcript_path) || input.cwd || "",
       title: sessionTitle(input.transcript_path),
       pid: claudeProcess(),
+      // 起動元のアプリの ID。どのアプリの窓を探すかはこれで決める
+      app: process.env.__CFBundleIdentifier ?? "",
       at: Math.floor(Date.now() / 1000),
     }),
   );

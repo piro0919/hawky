@@ -7,7 +7,6 @@ import { LanguageSwitch } from "./language-switch";
 const REPO = "https://github.com/piro0919/hawky";
 const DOWNLOAD = `${REPO}/releases/latest`;
 const BREW = "brew install --cask piro0919/tap/hawky";
-const HOOK = "node /Applications/Hawky.app/Contents/Resources/hook/install.mjs";
 
 type Step = { title: string; body: string };
 
@@ -142,7 +141,6 @@ export default async function Page({ params }: PageProps) {
                   <h3 className="font-extrabold text-lg">{step.title}</h3>
                   <p className="text-white/80 leading-relaxed">{step.body}</p>
                   {index === 0 && <Command>{BREW}</Command>}
-                  {index === 2 && <Command>{HOOK}</Command>}
                 </div>
               </li>
             ))}

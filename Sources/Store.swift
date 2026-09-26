@@ -9,6 +9,9 @@ struct Pending {
     /// 題名が付く前に待ちが起きると空になる
     let title: String
     let at: Date
+    /// セッションが動いているアプリの ID。フックが起動元から引き継いだ環境変数から拾う。
+    /// 古い記録には無いので、そのときは Cursor とみなす
+    var app: String = ""
 
     /// 一覧に出す名前。Cursor の窓の名前と同じ `<題名> — <フォルダ名>` の形にする。
     /// 1つの窓に複数のセッションがあると、フォルダ名だけでは行の見分けが付かない
@@ -64,7 +67,8 @@ enum Store {
                     cwd: (obj["project"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                         ?? (obj["cwd"] as? String) ?? "",
                     title: (obj["title"] as? String) ?? "",
-                    at: at
+                    at: at,
+                    app: (obj["app"] as? String) ?? ""
                 ))
         }
         // 古い待ちほど気付かれていない。上に置く
