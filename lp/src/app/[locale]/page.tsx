@@ -41,7 +41,7 @@ export default async function Page({ params }: PageProps) {
   const t = await getTranslations();
   const flow = t.raw("flow.steps") as Step[];
   const install = t.raw("install.steps") as Step[];
-  const features = ["title_match", "tabs", "clears", "finished", "quiet"] as const;
+  const features = ["title_match", "tabs", "clears", "finished"] as const;
   const shot = locale === "ja" ? "/shot-menu-ja.png" : "/shot-menu-en.png";
 
   return (

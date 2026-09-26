@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Hawky — know when Claude Code is waiting for you",
-    "description": "A Mac menu bar app that counts the Claude Code sessions waiting for permission, and takes you to the right Cursor or VS Code window in one click."
+    "description": "A Mac menu bar app that tells you when Claude Code is waiting for permission or for your next prompt, and takes you to that tab in one click. Works with Cursor and VS Code."
   },
   "hero": {
     "tagline": "Claude Code is waiting. Hawky noticed.",
-    "lead": "Run Claude Code in a few repositories at once and one of them will stop to ask for permission — silently, in a window you are not looking at. Hawky keeps watch from the menu bar and takes you straight to it.",
+    "lead": "Run Claude Code in a few repositories at once and one of them will stop and wait — silently, in a window you are not looking at. Hawky keeps watch from the menu bar and takes you straight to that tab.",
     "download": "Download — free",
     "requirement": "macOS 14 or later, Apple silicon"
   },
@@ -13,40 +13,36 @@
     "title": "Spot it, then swoop",
     "steps": [
       {
-        "title": "A session stops to ask",
-        "body": "Claude Code wants to run a command or edit a file, and waits for your yes."
+        "title": "A session stops",
+        "body": "Claude Code waits for your permission, or for your next prompt."
       },
       {
         "title": "The count shows up",
-        "body": "A number appears next to the hawk in the menu bar. Nothing pops up, nothing steals focus."
+        "body": "The number of permission waits appears next to the hawk. Nothing pops up to interrupt you."
       },
       {
         "title": "One click takes you there",
-        "body": "Pick the session from the menu and its Cursor or VS Code tab comes to the front, ready for your answer."
+        "body": "The session's tab comes to the front. ⌃⌥H does it too."
       }
     ]
   },
   "features": {
     "title": "What it does",
     "title_match": {
-      "title": "Finds the right window, not just the right repo",
-      "body": "Two windows on the same repository are told apart by the title Claude Code gave each session. You land on the one that is actually waiting."
+      "title": "Finds the right tab",
+      "body": "However many windows and tabs share a repository, Hawky tells them apart by the session's title."
     },
     "tabs": {
-      "title": "Reaches into macOS tabs",
-      "body": "Merged your editor windows into tabs? A background tab is invisible to the window list, so Hawky finds it in the tab bar and presses it for you."
+      "title": "Looks behind macOS tabs",
+      "body": "Merged your windows into macOS tabs? Hawky still finds the tab behind them."
     },
     "clears": {
       "title": "Clears itself",
-      "body": "Approve, deny or type a new prompt and the entry goes away on its own. A wait stays as long as it lasts, and anything left behind goes away with its Claude Code process, so the count never gets stuck."
+      "body": "Approve, deny or type your next prompt and it goes away. Close the editor and anything left goes too."
     },
     "finished": {
-      "title": "Tells you which one is done",
-      "body": "When a session finishes and waits for your next instruction, it shows up under Finished — without adding to the count. Press ⌃⌥H to jump to the oldest wait, from anywhere."
-    },
-    "quiet": {
-      "title": "Just leave it there",
-      "body": "No Dock icon, no window, no account. It watches one folder on your Mac and checks for an update once at launch."
+      "title": "Shows who is waiting for a prompt",
+      "body": "A session that has finished and is waiting for your next prompt is listed on its own, without adding to the count."
     }
   },
   "install": {
@@ -62,10 +58,10 @@
       },
       {
         "title": "Connect it to Claude Code",
-        "body": "Open Settings… from Hawky's menu and click Connect. It adds Hawky's hooks to ~/.claude/settings.json and leaves everything else as it is. Nothing else needs to be installed."
+        "body": "Choose Settings… in Hawky's menu and click Connect."
       }
     ],
-    "accessibility": "When Hawky asks for Accessibility access, allow it — that is how it brings windows to the front.",
+    "accessibility": "Allow Accessibility access when Hawky asks. It uses it to bring the tab to the front.",
     "cta": "Download — free"
   },
   "footer": {
@@ -80,11 +76,11 @@
   "privacy": {
     "title": "Privacy Policy",
     "updated": "Last updated: September 26, 2026",
-    "intro": "Hawky notices when Claude Code is waiting for permission and brings the right window to the front. That's the whole app. It has no server, no analytics, and no account.",
+    "intro": "Hawky notices when Claude Code is waiting and brings the right tab to the front. That's the whole app. It has no server, no analytics, and no account.",
     "sections": [
       {
         "title": "What it reads",
-        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting: the session ID, the folder it was opened in, the session title from the end of its transcript, the ID of its Claude Code process, the app it runs in, and the time. The app reads those files, and the titles of Cursor's and VS Code's windows and tabs so it can find the right one. It does not read your code or your conversations."
+        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting for permission or for your next prompt: the session ID, the folder it was opened in, the session title from the end of its transcript, the ID of its Claude Code process, the app it runs in, and the time. The app reads those files, and the titles of Cursor's and VS Code's windows and tabs so it can find the right one. It does not read your code or your conversations."
       },
       {
         "title": "Nothing leaves the Mac",

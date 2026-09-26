@@ -55,7 +55,7 @@ export default async function OgImage({
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ color: WHITE, fontSize: 118 }}>Hawky</div>
         <div style={{ color: AMBER, display: "flex", fontSize: 34, marginTop: 14 }}>
-          {isJa ? "Claude Code の許可待ちに気付く。" : "Claude Code is waiting. Hawky noticed."}
+          {isJa ? "待っている Claude Code に気付く。" : "Claude Code is waiting. Hawky noticed."}
         </div>
       </div>
     </div>,

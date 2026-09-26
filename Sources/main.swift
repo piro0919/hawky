@@ -116,9 +116,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             empty.isEnabled = false
             menu.addItem(empty)
         }
-        for p in waiting { menu.addItem(row(for: p)) }
-
-        // 終わったセッションは、許可待ちの下に見出しを付けて分ける
+        // 指示待ちがあるときは、両方に見出しを付けて分ける。片方にだけ付けると、
+        // 見出しの無い側が何の行なのか分からない
+        if !waiting.isEmpty {
+            if !finished.isEmpty { menu.addItem(.sectionHeader(title: Strings.permissionHeader)) }
+            for p in waiting { menu.addItem(row(for: p)) }
+        }
         if !finished.isEmpty {
             if !waiting.isEmpty { menu.addItem(.separator()) }
             menu.addItem(.sectionHeader(title: Strings.finishedHeader))

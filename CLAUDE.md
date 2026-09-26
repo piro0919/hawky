@@ -63,10 +63,10 @@ open ./Hawky.app --args --settings   # 設定の窓の「接続する」でフ�
 Cursor なら `com.todesktop.230313mzl4w4u92`、VS Code なら `com.microsoft.VSCode`。窓を探すアプリはこれで決める。
 VS Code も窓の名前の区切りは Cursor と同じ ` — ` だった（実測）。VS Code の試し開きのタブは名前に「, preview」が付く。
 
-## 終わったセッションとキー
+## 指示待ちとキー
 
-Stop のフックは `hook stop` で、そのセッションを「終わった」（`kind: finished`）として残す。次の指示の
-UserPromptSubmit で消える。メニューバーの数字は許可待ちだけで、終わったものは見出しを付けて下に並べる。
+Stop のフックは `hook stop` で、そのセッションを「指示待ち」（`kind: finished`）として残す。次の指示の
+UserPromptSubmit で消える。メニューバーの数字は許可待ちだけで、指示待ちがあるときは「許可待ち」「指示待ち」の見出しを両方に付けて分ける。
 終わったセッションは子のプロセスが起動しても消さない（裏の開発サーバーが子を起こすため）。
 ⌃⌥H は Carbon の RegisterEventHotKey。アクセシビリティは要らない。一番古い許可待ち、無ければ一番古い
 終わったセッションへ飛ぶ。登録の中身が変わると `isConnected` が偽になり、接続し直しを求める。

@@ -43,9 +43,10 @@ enum Strings {
 
     // メニュー
     static var statusDescription: String { t("Claude Code の許可待ち", "Claude Code waiting for permission") }
-    static var nothingWaiting: String { t("許可待ちはありません", "Nothing is waiting") }
+    static var nothingWaiting: String { t("待機中のセッションはありません", "No session is waiting") }
     static var notConnected: String { t("Claude Code に接続されていません", "Not connected to Claude Code") }
-    static var finishedHeader: String { t("作業が終わったセッション", "Finished") }
+    static var permissionHeader: String { t("許可待ち", "Waiting for permission") }
+    static var finishedHeader: String { t("指示待ち", "Waiting for your next prompt") }
     static var settings: String { t("設定…", "Settings…") }
     static var quit: String { t("終了", "Quit") }
 
@@ -59,8 +60,10 @@ enum Strings {
     static var connectFailed: String {
         t("Claude Code の設定ファイルを書き換えられませんでした", "Could not update Claude Code's settings file")
     }
-    static var showsFinished: String { t("作業が終わったセッションも出す", "Show finished sessions") }
-    static var hotKey: String { t("\(HotKey.display) で一番古い待ちへ移る", "Jump to the oldest wait with \(HotKey.display)") }
+    static var showsFinished: String { t("指示待ちのセッションも出す", "Also show sessions waiting for a prompt") }
+    static var hotKey: String {
+        t("\(HotKey.display) で待機中のセッションへ移る", "\(HotKey.display) jumps to a waiting session")
+    }
     static var language: String { t("言語", "Language") }
     static var launchAtLogin: String { t("ログイン時に起動", "Launch at Login") }
     static var launchFailed: String { t("ログイン時の起動を切り替えられませんでした", "Could not change Launch at Login") }
