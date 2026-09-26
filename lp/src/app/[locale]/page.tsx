@@ -81,11 +81,11 @@ export default async function Page({ params }: PageProps) {
           <div className="flex flex-1 justify-center">
             <Image
               alt=""
-              className="w-full max-w-sm rounded-3xl shadow-[0_30px_70px_-20px_rgba(60,10,0,0.6)] ring-4 ring-white/30"
-              height={locale === "ja" ? 548 : 596}
+              className="w-full max-w-md rounded-3xl shadow-[0_30px_70px_-20px_rgba(60,10,0,0.6)] ring-4 ring-white/30"
+              height={478}
               priority
               src={shot}
-              width={locale === "ja" ? 588 : 598}
+              width={locale === "ja" ? 776 : 768}
             />
           </div>
         </div>
