@@ -40,11 +40,6 @@ final class SettingsWindowController: NSWindowController {
         // 見出しだけが上に浮く。先に中身を入れておく
         showConnection()
 
-        let connectHint = NSTextField(wrappingLabelWithString: Strings.connectHint)
-        connectHint.font = .systemFont(ofSize: 11)
-        connectHint.textColor = .secondaryLabelColor
-        connectHint.preferredMaxLayoutWidth = 250
-
         languagePopUp.target = self
         languagePopUp.action = #selector(changeLanguage)
         for language in Language.allCases {
@@ -68,7 +63,6 @@ final class SettingsWindowController: NSWindowController {
 
         let stack = NSStackView(views: [
             row(Strings.claudeCode, connectionLabel, connectionButton),
-            aligned(connectHint),
             divider(),
             row(Strings.language, languagePopUp),
             aligned(launchCheckbox),

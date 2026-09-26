@@ -55,11 +55,6 @@ enum Strings {
     static var disconnected: String { t("未接続", "Not connected") }
     static var connect: String { t("接続する", "Connect") }
     static var disconnect: String { t("接続を解除", "Disconnect") }
-    static var connectHint: String {
-        t(
-            "~/.claude/settings.json に Hawky のフックを足します。ほかの設定には触りません。",
-            "Adds Hawky's hooks to ~/.claude/settings.json. Nothing else in it is touched.")
-    }
     static var connectFailed: String {
         t("Claude Code の設定ファイルを書き換えられませんでした", "Could not update Claude Code's settings file")
     }
