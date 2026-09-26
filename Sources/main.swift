@@ -1,5 +1,4 @@
 import AppKit
-import ServiceManagement
 
 /// メニューバーに常駐し、許可待ちの件数を出す。
 /// セッションが無くても終了しない。消えると気付けないため
@@ -9,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var watcher: DispatchSourceFileSystemObject?
     private var timer: Timer?
     private var pending: [Pending] = []
+    private var settingsWindow = SettingsWindowController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         try? FileManager.default.createDirectory(
@@ -23,9 +23,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Timer は主の実行ループから呼ぶ。飛ばずに入り、違ったら落とす
             MainActor.assumeIsolated { self?.refresh() }
         }
+        // 言語を変えたら、設定の窓を作り直す。文字は窓を作るときに焼き込んでいる
+        NotificationCenter.default.addObserver(forName: .languageChanged, object: nil, queue: .main) {
+            [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let wasVisible = self.settingsWindow.window?.isVisible ?? false
+                self.settingsWindow.close()
+                self.settingsWindow = SettingsWindowController()
+                if wasVisible { self.settingsWindow.show() }
+                self.refresh()
+            }
+        }
         Focus.ensureTrusted()
         refresh()
         Updater.shared.checkQuietly()
+        if CommandLine.arguments.contains("--settings") { openSettings() }
     }
 
     /// フックがファイルを置いた瞬間に反応する
@@ -46,7 +59,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let image = NSImage(named: "StatusIcon") else { return nil }
         image.isTemplate = true
         image.size = NSSize(width: 18, height: 18)
-        image.accessibilityDescription = Strings.statusDescription
         return image
     }()
 
@@ -54,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pending = Store.load()
         let count = pending.count
         guard let button = item.button else { return }
+        statusIcon?.accessibilityDescription = Strings.statusDescription
         button.image = statusIcon
         // 待ちが無いときは影絵を薄くして、あるときとの違いを件数以外でも見せる
         button.appearsDisabled = count == 0
@@ -63,6 +76,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func rebuildMenu() {
         guard let menu = item.menu else { return }
         menu.removeAllItems()
+
+        // 接続していなければ、待ちは1件も届かない。入れた人が「動かない」と感じる前に、ここで知らせる
+        if !Connection.isConnected {
+            let warning = NSMenuItem(title: Strings.notConnected, action: #selector(openSettings), keyEquivalent: "")
+            warning.target = self
+            warning.image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)
+            menu.addItem(warning)
+            menu.addItem(.separator())
+        }
 
         if pending.isEmpty {
             let empty = NSMenuItem(title: Strings.nothingWaiting, action: nil, keyEquivalent: "")
@@ -80,60 +102,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menu.addItem(.separator())
 
-        let connect = NSMenuItem(title: Strings.connect, action: #selector(toggleConnection), keyEquivalent: "")
-        connect.target = self
-        connect.state = Connection.isConnected ? .on : .off
-        menu.addItem(connect)
-
-        let login = NSMenuItem(title: Strings.launchAtLogin, action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
-        login.target = self
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        menu.addItem(login)
-
-        let update = NSMenuItem(title: Strings.checkForUpdates, action: #selector(checkForUpdates), keyEquivalent: "")
-        update.target = self
-        menu.addItem(update)
-
-        menu.addItem(.separator())
-        let quit = NSMenuItem(title: Strings.quit, action: #selector(quit), keyEquivalent: "q")
-        quit.target = self
-        menu.addItem(quit)
+        let settings = NSMenuItem(title: Strings.settings, action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
+        menu.addItem(withTitle: Strings.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     }
 
-    /// 常駐して見張るのが役目なので、ログイン時に起動しないと意味が薄い。切り替えはここだけ
-    @objc private func toggleLaunchAtLogin() {
-        do {
-            if SMAppService.mainApp.status == .enabled {
-                try SMAppService.mainApp.unregister()
-            } else {
-                try SMAppService.mainApp.register()
-            }
-        } catch {
-            NSSound.beep()
-        }
-    }
-
-    /// フックの登録と解除。設定ファイルが読めないなど、書き換えられなければ理由を出す
-    @objc private func toggleConnection() {
-        do {
-            if Connection.isConnected { try Connection.disconnect() } else { try Connection.connect() }
-        } catch {
-            let alert = NSAlert()
-            alert.messageText = Strings.connectFailed
-            alert.informativeText = Connection.settingsURL.path
-            NSApp.activate(ignoringOtherApps: true)
-            alert.runModal()
-        }
-    }
-
-    @objc private func checkForUpdates() { Updater.shared.checkNow() }
+    @objc private func openSettings() { settingsWindow.show() }
 
     @objc private func revealPending(_ sender: NSMenuItem) {
         guard pending.indices.contains(sender.tag) else { return }
         Focus.reveal(pending[sender.tag])
     }
-
-    @objc private func quit() { NSApp.terminate(nil) }
 }
 
 extension AppDelegate: NSMenuDelegate {

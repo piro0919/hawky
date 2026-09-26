@@ -35,11 +35,13 @@ not an Apple Developer ID, so macOS cannot verify who made it. To let it through
 open **System Settings → Privacy & Security**, scroll to the bottom, and click
 **Open Anyway** next to the message about Hawky. You only do this once.
 
-Then open Hawky's menu and choose **Connect to Claude Code**. That adds Hawky's
+Then open Hawky's menu, choose **Settings…**, and click **Connect** next to
+Claude Code. Until you do, the menu says *Not connected to Claude Code* at the
+top. Connecting adds Hawky's
 hooks to `~/.claude/settings.json`; hooks and settings you already have are left
 as they are, and the file is backed up next to itself as `settings.json.bak.hawky`
 first. The hooks call Hawky itself, so nothing else — not even Node — needs to be
-installed. Choose the item again to take the hooks out.
+installed. **Disconnect** in the same place takes the hooks out.
 
 Grant Accessibility access when Hawky asks — it needs it to bring windows to the
 front.
@@ -66,7 +68,8 @@ something when there is one.
   goes away when its Claude Code process does — so closing the editor never
   leaves the count stuck. Once a command is approved and running, the wait is
   cleared without waiting for the command to finish.
-- **Launch at Login** and **Check for Updates…** are in the menu.
+- **Settings…** holds the Claude Code connection, the language (follow the
+  system, English or Japanese), Launch at Login and Check for Updates.
 
 ## How it works
 
@@ -92,7 +95,7 @@ When you pick a row, it looks for the session in this order:
 ```bash
 ./build.sh
 ./Hawky.app/Contents/MacOS/Hawky --selftest
-open Hawky.app          # then choose Connect to Claude Code in its menu
+open Hawky.app --args --settings   # opens Settings; click Connect
 ```
 
 `--selftest` checks the window-matching rules, the settings-file editing and the

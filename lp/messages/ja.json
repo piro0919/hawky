@@ -58,7 +58,7 @@
       },
       {
         "title": "Claude Code とつなぐ",
-        "body": "Hawky のメニューで「Claude Code に接続」を選びます。~/.claude/settings.json に Hawky のフックを足し、元からある設定には触りません。ほかに入れるものはありません。"
+        "body": "Hawky のメニューから「設定…」を開き、「接続する」を押します。~/.claude/settings.json に Hawky のフックを足し、元からある設定には触りません。ほかに入れるものはありません。"
       }
     ],
     "accessibility": "Hawky がアクセシビリティの許可を求めてきたら、許可してください。ウィンドウを前に出すために使います。",

@@ -45,7 +45,7 @@ Claude Code のフックを使う。
 
 ```sh
 ./build.sh          # Hawky.app ができる
-open ./Hawky.app    # メニューの「Claude Code に接続」でフックを登録する
+open ./Hawky.app --args --settings   # 設定の窓の「接続する」でフックを登録する
 ```
 
 初回はアクセシビリティの許可を求められる。ウィンドウを前面に出すために要る。
@@ -62,6 +62,14 @@ open ./Hawky.app    # メニューの「Claude Code に接続」でフックを�
 待ちの記録には、フックが環境変数 `__CFBundleIdentifier` から拾った起動元のアプリの ID が入る。
 Cursor なら `com.todesktop.230313mzl4w4u92`、VS Code なら `com.microsoft.VSCode`。窓を探すアプリはこれで決める。
 VS Code も窓の名前の区切りは Cursor と同じ ` — ` だった（実測）。VS Code の試し開きのタブは名前に「, preview」が付く。
+
+## 設定の窓
+
+作りは Gocci の `SettingsWindow.swift` を写した（見出し右寄せ・区切り線・下に版数）。メニューは待ちの一覧と
+「設定…」「終了」だけにして、接続・言語・ログイン時に起動・アップデートの確認を窓に集めた。
+未接続のときはメニューの先頭に「Claude Code に接続されていません」を出し、押すと窓が開く。
+行の高さは組み立てた時点の文字で揃うので、中身の変わる文字は組み立てる前に入れておく
+（空のまま組んだら見出しだけ上に浮いた）。`--settings` で起動すると窓が開く。
 
 ## アイコン
 

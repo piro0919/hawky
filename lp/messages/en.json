@@ -58,7 +58,7 @@
       },
       {
         "title": "Connect it to Claude Code",
-        "body": "Open Hawky's menu and choose Connect to Claude Code. It adds Hawky's hooks to ~/.claude/settings.json and leaves everything else as it is. Nothing else needs to be installed."
+        "body": "Open Settings… from Hawky's menu and click Connect. It adds Hawky's hooks to ~/.claude/settings.json and leaves everything else as it is. Nothing else needs to be installed."
       }
     ],
     "accessibility": "When Hawky asks for Accessibility access, allow it — that is how it brings windows to the front.",
