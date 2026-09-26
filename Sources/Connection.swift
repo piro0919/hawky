@@ -17,12 +17,15 @@ enum Connection {
         command.contains("hawky-hook.mjs") || command.contains("/Contents/MacOS/Hawky' hook")
     }
 
-    /// 今のアプリを指すフックが、許可待ちの知らせに登録されているか
+    /// 今のアプリを指すフックが、必要な知らせに全部そろって登録されているか。
+    /// 版が上がって登録の中身が変わったら、未接続として出し、接続し直してもらう
     static var isConnected: Bool {
         guard let settings = load() else { return false }
-        let wanted = command("add")
-        return (settings["hooks"]?["Notification"]?.arrayValue ?? []).contains { matcher in
-            (matcher["hooks"]?.arrayValue ?? []).contains { $0["command"]?.stringValue == wanted }
+        return events.allSatisfy { event, matcher, mode in
+            (settings["hooks"]?[event]?.arrayValue ?? []).contains { entry in
+                entry["matcher"]?.stringValue == matcher
+                    && (entry["hooks"]?.arrayValue ?? []).contains { $0["command"]?.stringValue == command(mode) }
+            }
         }
     }
 
@@ -36,7 +39,8 @@ enum Connection {
         // そのセッションが動き出したら消す。許可・拒否・入力のどれでも解消とみなす
         ("PostToolUse", "*", "clear"),
         ("UserPromptSubmit", nil, "clear"),
-        ("Stop", nil, "clear"),
+        // 作業を終えて次の指示を待つ。許可待ちが残っていれば、それも置き換わる
+        ("Stop", nil, "stop"),
     ]
 
     /// 設定を読み、自分のフックを全部外してから、必要なら入れ直して書き戻す

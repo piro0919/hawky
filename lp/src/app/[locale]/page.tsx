@@ -41,7 +41,7 @@ export default async function Page({ params }: PageProps) {
   const t = await getTranslations();
   const flow = t.raw("flow.steps") as Step[];
   const install = t.raw("install.steps") as Step[];
-  const features = ["title_match", "tabs", "clears", "quiet"] as const;
+  const features = ["title_match", "tabs", "clears", "finished", "quiet"] as const;
   const shot = locale === "ja" ? "/shot-menu-ja.png" : "/shot-menu-en.png";
 
   return (
@@ -117,8 +117,14 @@ export default async function Page({ params }: PageProps) {
         <div className="mx-auto flex max-w-5xl flex-col gap-12">
           <h2 className="display text-center text-3xl">{t("features.title")}</h2>
           <div className="grid gap-6 sm:grid-cols-2">
-            {features.map((key) => (
-              <div className="flex flex-col gap-3 rounded-[28px] bg-white p-8 shadow-sm" key={key}>
+            {features.map((key, index) => (
+              <div
+                className={`flex flex-col gap-3 rounded-[28px] bg-white p-8 shadow-sm ${
+                  // 数が奇数なら、最後の1つを横いっぱいに置いて半端を残さない
+                  features.length % 2 === 1 && index === features.length - 1 ? "sm:col-span-2" : ""
+                }`}
+                key={key}
+              >
                 <h3 className="font-extrabold text-xl">{t(`features.${key}.title`)}</h3>
                 <p className="leading-relaxed opacity-75">{t(`features.${key}.body`)}</p>
               </div>

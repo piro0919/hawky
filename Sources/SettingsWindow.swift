@@ -9,6 +9,8 @@ final class SettingsWindowController: NSWindowController {
     private let connectionButton = NSButton(title: "", target: nil, action: nil)
     private let languagePopUp = NSPopUpButton()
     private let launchCheckbox = NSButton(checkboxWithTitle: Strings.launchAtLogin, target: nil, action: nil)
+    private let finishedCheckbox = NSButton(checkboxWithTitle: Strings.showsFinished, target: nil, action: nil)
+    private let hotKeyCheckbox = NSButton(checkboxWithTitle: Strings.hotKey, target: nil, action: nil)
     private let messageLabel = NSTextField(labelWithString: "")
     private lazy var messageRow: NSView = aligned(messageLabel)
     private var dividers: [NSView] = []
@@ -48,6 +50,10 @@ final class SettingsWindowController: NSWindowController {
 
         launchCheckbox.target = self
         launchCheckbox.action = #selector(toggleLaunch)
+        finishedCheckbox.target = self
+        finishedCheckbox.action = #selector(toggleFinished)
+        hotKeyCheckbox.target = self
+        hotKeyCheckbox.action = #selector(toggleHotKey)
 
         messageLabel.font = .systemFont(ofSize: 11)
         // 文字が無いときは畳む。空のまま置くと、その行のぶんだけ間延びする
@@ -63,6 +69,9 @@ final class SettingsWindowController: NSWindowController {
 
         let stack = NSStackView(views: [
             row(Strings.claudeCode, connectionLabel, connectionButton),
+            divider(),
+            aligned(finishedCheckbox),
+            aligned(hotKeyCheckbox),
             divider(),
             row(Strings.language, languagePopUp),
             aligned(launchCheckbox),
@@ -103,6 +112,8 @@ final class SettingsWindowController: NSWindowController {
         showConnection()
         languagePopUp.selectItem(at: Language.allCases.firstIndex(of: Language.chosen) ?? 0)
         launchCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        finishedCheckbox.state = Preferences.showsFinished ? .on : .off
+        hotKeyCheckbox.state = Preferences.usesHotKey ? .on : .off
         report("")
 
         NSApp.activate(ignoringOtherApps: true)
@@ -153,6 +164,10 @@ final class SettingsWindowController: NSWindowController {
         // OS 側の状態に見た目を合わせる。失敗したときは元に戻る
         launchCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
     }
+
+    @objc private func toggleFinished() { Preferences.showsFinished = finishedCheckbox.state == .on }
+
+    @objc private func toggleHotKey() { Preferences.usesHotKey = hotKeyCheckbox.state == .on }
 
     @objc private func checkForUpdates() { Updater.shared.checkNow() }
 

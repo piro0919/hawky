@@ -105,7 +105,7 @@ enum SelfTest {
             let commands = (connected["hooks"]?["Stop"]?.arrayValue ?? []).flatMap {
                 ($0["hooks"]?.arrayValue ?? []).compactMap { $0["command"]?.stringValue }
             }
-            check(commands == ["'\(exe)' hook clear"], "Node 時代のフックを外して入れ替える")
+            check(commands == ["'\(exe)' hook stop"], "Node 時代のフックを外して入れ替える")
             check(
                 connected["hooks"]?["PreToolUse"]?.arrayValue?.count == 1
                     && connected["hooks"]?["PreToolUse"]?.arrayValue?.first?["matcher"]?.stringValue == "Bash",
@@ -128,6 +128,18 @@ enum SelfTest {
             check(Store.isStale(at: now, pid: 999_999, now: now), "プロセスが居なければすぐ捨てる")
             check(Store.isStale(at: now.addingTimeInterval(-25 * 60 * 60), pid: me, now: now), "生きていても24時間たてば捨てる")
             check(!Store.isStale(at: now.addingTimeInterval(-30 * 60), pid: 0, now: now), "番号が無ければ1時間までは残す")
+
+            // 終わったセッションは、子のプロセスが起動しても消さない（裏の開発サーバーなど）
+            let server = Process()
+            server.executableURL = URL(fileURLWithPath: "/bin/sleep")
+            server.arguments = ["5"]
+            let since = Date().addingTimeInterval(-10)
+            try? server.run()
+            check(
+                !Store.isStale(at: since, pid: getpid(), kind: .finished, now: Date()),
+                "終わったセッションは子が起動しても残す")
+            check(Store.isStale(at: since, pid: getpid(), kind: .permission, now: Date()), "許可待ちは子が起動したら消す")
+            server.terminate()
             check(Store.isStale(at: now.addingTimeInterval(-61 * 60), pid: 0, now: now), "番号が無ければ1時間で捨てる")
 
             // 許可されてコマンドが動き出したら、終わるのを待たずに消す

@@ -1,6 +1,12 @@
 import Foundation
 
 struct Pending {
+    /// 何を待っているか。許可の返事か、次の指示か
+    enum Kind: String {
+        case permission
+        case finished
+    }
+
     let sessionID: String
     /// セッションを開いたときのフォルダ。Cursor の窓が開いているのはここ。
     /// 途中で cd した先ではない。古いフックの記録には無いので、そのときは cwd で代える
@@ -12,6 +18,8 @@ struct Pending {
     /// セッションが動いているアプリの ID。フックが起動元から引き継いだ環境変数から拾う。
     /// 古い記録には無いので、そのときは Cursor とみなす
     var app: String = ""
+    /// 古い記録には無い。そのときは許可待ち
+    var kind: Kind = .permission
 
     /// 一覧に出す名前。Cursor の窓の名前と同じ `<題名> — <フォルダ名>` の形にする。
     /// 1つの窓に複数のセッションがあると、フォルダ名だけでは行の見分けが付かない
@@ -57,7 +65,8 @@ enum Store {
 
             let at = Date(timeIntervalSince1970: (obj["at"] as? Double) ?? 0)
             let pid = (obj["pid"] as? Int32) ?? Int32((obj["pid"] as? Int) ?? 0)
-            if isStale(at: at, pid: pid) {
+            let kind = (obj["kind"] as? String).flatMap(Pending.Kind.init(rawValue:)) ?? .permission
+            if isStale(at: at, pid: pid, kind: kind) {
                 try? fm.removeItem(at: file)
                 continue
             }
@@ -68,17 +77,21 @@ enum Store {
                         ?? (obj["cwd"] as? String) ?? "",
                     title: (obj["title"] as? String) ?? "",
                     at: at,
-                    app: (obj["app"] as? String) ?? ""
+                    app: (obj["app"] as? String) ?? "",
+                    kind: (obj["kind"] as? String).flatMap(Pending.Kind.init(rawValue:)) ?? .permission
                 ))
         }
         // 古い待ちほど気付かれていない。上に置く
         return out.sorted { $0.at < $1.at }
     }
 
-    static func isStale(at: Date, pid: Int32, now: Date = Date()) -> Bool {
+    static func isStale(at: Date, pid: Int32, kind: Pending.Kind = .permission, now: Date = Date()) -> Bool {
         let age = now.timeIntervalSince(at)
         guard pid > 0 else { return age > expiryWithoutProcess }
-        return age > expiryWithProcess || !isAlive(pid) || startedWork(pid, since: at)
+        if age > expiryWithProcess || !isAlive(pid) { return true }
+        // 終わったセッションは、指示を打てば UserPromptSubmit で消える。裏で動かしている
+        // 開発サーバーが子を起こすこともあるので、子の起動では消さない
+        return kind == .permission && startedWork(pid, since: at)
     }
 
     /// 許可されたか。Claude Code には「許可された」ときに届くフックが無く、届くのは

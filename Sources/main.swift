@@ -9,6 +9,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var timer: Timer?
     private var pending: [Pending] = []
     private var settingsWindow = SettingsWindowController()
+    private lazy var hotKey = HotKey { [weak self] in self?.revealOldest() }
+
+    /// 一覧に出すもの。終わったセッションは設定で隠せる
+    private var visible: [Pending] {
+        Preferences.showsFinished ? pending : pending.filter { $0.kind == .permission }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         try? FileManager.default.createDirectory(
@@ -34,6 +40,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if wasVisible { self.settingsWindow.show() }
                 self.refresh()
             }
+        }
+        hotKey.apply(enabled: Preferences.usesHotKey)
+        NotificationCenter.default.addObserver(forName: .hotKeyChanged, object: nil, queue: .main) {
+            [weak self] _ in
+            MainActor.assumeIsolated { self?.hotKey.apply(enabled: Preferences.usesHotKey) }
         }
         Focus.ensureTrusted()
         refresh()
@@ -64,13 +75,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func refresh() {
         pending = Store.load()
-        let count = pending.count
+        // 数字は許可待ちだけ。終わったセッションは急がないので数えない
+        let count = visible.filter { $0.kind == .permission }.count
         guard let button = item.button else { return }
         statusIcon?.accessibilityDescription = Strings.statusDescription
         button.image = statusIcon
-        // 待ちが無いときは影絵を薄くして、あるときとの違いを件数以外でも見せる
-        button.appearsDisabled = count == 0
+        // 何も無いときは影絵を薄くする。終わったセッションだけのときは、数字を出さずに濃くする
+        button.appearsDisabled = visible.isEmpty
         button.title = count > 0 ? " \(count)" : ""
+    }
+
+    /// キーを押した。一番古い許可待ちへ、無ければ一番古い終わったセッションへ飛ぶ
+    private func revealOldest() {
+        refresh()
+        guard let target = visible.first(where: { $0.kind == .permission }) ?? visible.first else {
+            NSSound.beep()
+            return
+        }
+        Focus.reveal(target)
     }
 
     private func rebuildMenu() {
@@ -86,19 +108,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(.separator())
         }
 
-        if pending.isEmpty {
+        let waiting = visible.filter { $0.kind == .permission }
+        let finished = visible.filter { $0.kind == .finished }
+
+        if waiting.isEmpty && finished.isEmpty {
             let empty = NSMenuItem(title: Strings.nothingWaiting, action: nil, keyEquivalent: "")
             empty.isEnabled = false
             menu.addItem(empty)
-        } else {
-            for (index, p) in pending.enumerated() {
-                let row = NSMenuItem(
-                    title: p.label, action: #selector(revealPending(_:)), keyEquivalent: ""
-                )
-                row.target = self
-                row.tag = index
-                menu.addItem(row)
-            }
+        }
+        for p in waiting { menu.addItem(row(for: p)) }
+
+        // 終わったセッションは、許可待ちの下に見出しを付けて分ける
+        if !finished.isEmpty {
+            if !waiting.isEmpty { menu.addItem(.separator()) }
+            menu.addItem(.sectionHeader(title: Strings.finishedHeader))
+            for p in finished { menu.addItem(row(for: p)) }
         }
         menu.addItem(.separator())
 
@@ -110,9 +134,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() { settingsWindow.show() }
 
+    private func row(for p: Pending) -> NSMenuItem {
+        let row = NSMenuItem(title: p.label, action: #selector(revealPending(_:)), keyEquivalent: "")
+        row.target = self
+        row.representedObject = p.sessionID
+        return row
+    }
+
     @objc private func revealPending(_ sender: NSMenuItem) {
-        guard pending.indices.contains(sender.tag) else { return }
-        Focus.reveal(pending[sender.tag])
+        guard let id = sender.representedObject as? String, let p = pending.first(where: { $0.sessionID == id })
+        else { return }
+        Focus.reveal(p)
     }
 }
 

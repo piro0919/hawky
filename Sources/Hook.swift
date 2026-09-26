@@ -1,14 +1,20 @@
 import Foundation
 
-/// Claude Code のフックとして呼ばれたときの入口。`Hawky hook add` / `Hawky hook clear`。
+/// Claude Code のフックとして呼ばれたときの入口。`Hawky hook add|stop|clear`。
 ///   add   … 許可待ちが発生した（Notification / permission_prompt）
-///   clear … そのセッションが動き出した＝待ちが解消した
+///   stop  … 作業を終えて、次の指示を待っている（Stop）
+///   clear … そのセッションが動き出した、または指示を受けた＝待ちが解消した
 /// 標準入力にフックの JSON が来る。画面は出さず、ファイルを1つ書くか消すだけで終わる。
 /// 以前は Node のスクリプトで、Node の入っていない Mac では動かなかった
 enum Hook {
     /// フックは何があっても Claude Code を止めない。読めなければ黙って 0 で終わる
     static func run(_ arguments: [String]) -> Int32 {
-        let adding = arguments.first == "add"
+        let kind: Pending.Kind? =
+            switch arguments.first {
+            case "add": .permission
+            case "stop": .finished
+            default: nil
+            }
         let data = FileHandle.standardInput.readDataToEndOfFile()
         guard let input = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return 0 }
 
@@ -20,7 +26,7 @@ enum Hook {
         guard !id.isEmpty else { return 0 }
 
         let file = Paths.pendingDir.appendingPathComponent("\(id).json")
-        guard adding else {
+        guard let kind else {
             try? FileManager.default.removeItem(at: file)
             return 0
         }
@@ -37,6 +43,7 @@ enum Hook {
             // 起動元のアプリの ID は環境変数で子まで引き継がれる。Cursor なら Cursor の、
             // VS Code なら VS Code の ID が入る。どのアプリの窓を探すかはこれで決める
             "app": ProcessInfo.processInfo.environment["__CFBundleIdentifier"] ?? "",
+            "kind": kind.rawValue,
             "at": Int(Date().timeIntervalSince1970),
         ]
         try? FileManager.default.createDirectory(at: Paths.pendingDir, withIntermediateDirectories: true)

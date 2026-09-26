@@ -53,6 +53,12 @@ something when there is one.
 
 - **Counts the sessions that are waiting.** The number sits next to the hawk in
   the menu bar. With nothing waiting, the hawk is dimmed.
+- **Also lists sessions that have finished.** When Claude Code is done and waiting
+  for your next instruction, the session shows up under *Finished*. It does not
+  add to the count, and it goes away as soon as you type the next prompt.
+- **Takes you there in one click, or with ⌃⌥H.** The shortcut jumps to the
+  oldest session waiting for permission, or to the oldest finished one when
+  nothing is waiting.
 - **Takes you there in one click.** Each waiting session is a row in the menu,
   named "<session title> — <folder>", the way Cursor and VS Code name their
   windows.
@@ -68,8 +74,9 @@ something when there is one.
   goes away when its Claude Code process does — so closing the editor never
   leaves the count stuck. Once a command is approved and running, the wait is
   cleared without waiting for the command to finish.
-- **Settings…** holds the Claude Code connection, the language (follow the
-  system, English or Japanese), Launch at Login and Check for Updates.
+- **Settings…** holds the Claude Code connection, whether finished sessions are
+  shown, the ⌃⌥H shortcut, the language (follow the system, English or
+  Japanese), Launch at Login and Check for Updates.
 
 ## How it works
 
@@ -78,8 +85,8 @@ to ask. Hawky's hook writes one small file per waiting session to
 `~/.claude/hawky/pending/`, with the session's title read from the end of its
 transcript, the folder it was opened in, the ID of its Claude Code process and
 the app it runs in. `PostToolUse`, `UserPromptSubmit` and `Stop` delete it
-again. The hook is Hawky's own binary, run as `Hawky hook add` or
-`Hawky hook clear`; it takes a few milliseconds. The app watches that folder and
+again, and `Stop` turns it into a finished session until the next prompt. The
+hook is Hawky's own binary, run as `Hawky hook add`, `stop` or `clear`; it takes a few milliseconds. The app watches that folder and
 does nothing else in the background.
 
 When you pick a row, it looks for the session in this order:

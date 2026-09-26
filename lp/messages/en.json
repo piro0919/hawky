@@ -40,6 +40,10 @@
       "title": "Clears itself",
       "body": "Approve, deny or type a new prompt and the entry goes away on its own. A wait stays as long as it lasts, and anything left behind goes away with its Claude Code process, so the count never gets stuck."
     },
+    "finished": {
+      "title": "Tells you which one is done",
+      "body": "When a session finishes and waits for your next instruction, it shows up under Finished — without adding to the count. Press ⌃⌥H to jump to the oldest wait, from anywhere."
+    },
     "quiet": {
       "title": "Just leave it there",
       "body": "No Dock icon, no window, no account. It watches one folder on your Mac and checks for an update once at launch."
