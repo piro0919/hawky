@@ -82,7 +82,7 @@ export default async function Page({ params }: PageProps) {
             <Image
               alt=""
               className="w-full max-w-md rounded-3xl shadow-[0_30px_70px_-20px_rgba(60,10,0,0.6)] ring-4 ring-white/30"
-              height={478}
+              height={596}
               priority
               src={shot}
               width={locale === "ja" ? 776 : 768}
