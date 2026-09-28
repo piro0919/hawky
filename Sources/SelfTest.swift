@@ -128,6 +128,7 @@ enum SelfTest {
             check(Store.isStale(at: now, pid: 999_999, now: now), "プロセスが居なければすぐ捨てる")
             check(Store.isStale(at: now.addingTimeInterval(-25 * 60 * 60), pid: me, now: now), "生きていても24時間たてば捨てる")
             check(!Store.isStale(at: now.addingTimeInterval(-30 * 60), pid: 0, now: now), "番号が無ければ1時間までは残す")
+            check(!Store.isOrphanedFromEditor(me), "シェルから起動したプロセスは置き去りとみなさない")
 
             // 終わったセッションは、子のプロセスが起動しても消さない（裏の開発サーバーなど）
             let server = Process()

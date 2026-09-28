@@ -88,7 +88,7 @@ enum Store {
     static func isStale(at: Date, pid: Int32, kind: Pending.Kind = .permission, now: Date = Date()) -> Bool {
         let age = now.timeIntervalSince(at)
         guard pid > 0 else { return age > expiryWithoutProcess }
-        if age > expiryWithProcess || !isAlive(pid) { return true }
+        if age > expiryWithProcess || !isAlive(pid) || isOrphanedFromEditor(pid) { return true }
         // 終わったセッションは、指示を打てば UserPromptSubmit で消える。裏で動かしている
         // 開発サーバーが子を起こすこともあるので、子の起動では消さない
         return kind == .permission && startedWork(pid, since: at)
@@ -124,5 +124,30 @@ enum Store {
     /// 他人のプロセスなら EPERM になるが、居ることには変わりない
     static func isAlive(_ pid: Int32) -> Bool {
         kill(pid, 0) == 0 || errno == EPERM
+    }
+
+    /// エディタに置き去りにされたか。Cursor を再起動すると、前の拡張ホストが死なずに
+    /// launchd に引き取られて残ることがあり、そこから起動した Claude Code も生き続ける。
+    /// 画面からは消えているのに、プロセスが居るので待ちが消えなかった。
+    /// 拡張ホストは「〜 Helper (Plugin)」という名前で、本来はエディタの本体の子になる。
+    /// 親が launchd になっていれば置き去りとみなす。ターミナルから起動した
+    /// Claude Code は親がシェルなので当たらない
+    static func isOrphanedFromEditor(_ pid: Int32) -> Bool {
+        let parent = parentPID(of: pid)
+        guard parent > 1, processName(parent).contains("Helper") else { return false }
+        return parentPID(of: parent) == 1
+    }
+
+    static func parentPID(of pid: Int32) -> Int32 {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return 0 }
+        return Int32(info.pbi_ppid)
+    }
+
+    static func processName(_ pid: Int32) -> String {
+        var name = [CChar](repeating: 0, count: 256)
+        guard proc_name(pid, &name, UInt32(name.count)) > 0 else { return "" }
+        return String(cString: name)
     }
 }
