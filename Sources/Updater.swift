@@ -50,7 +50,9 @@ final class Updater: NSObject, SPUUpdaterDelegate {
         error: (any Error)?
     ) {
         log("確認が終わりました: \(error.map { "\($0)" } ?? "問題なし")")
-        guard foundUpdate else { return }
+        // 後始末は黙った確認のときだけ。checkNow で出した画面を閉じたときもここに来て、
+        // そこでも didFindValidUpdate が立っている。見分けずに出し直すと、閉じるたびに画面が出直す
+        guard updateCheck == .updateInformation, foundUpdate else { return }
         foundUpdate = false
 
         DispatchQueue.main.async { [weak self] in
