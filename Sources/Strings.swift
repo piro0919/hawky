@@ -62,6 +62,7 @@ enum Strings {
     }
     static var configFolder: String { t("設定フォルダ", "Config Folder") }
     static var chooseFolder: String { t("変更…", "Change…") }
+    static var invalidJSON: String { t("JSON として読めません", "It is not valid JSON") }
     static var showsFinished: String { t("指示待ちのセッションも出す", "Also show sessions waiting for a prompt") }
     static var hotKey: String {
         t("\(HotKey.display) で待機中のセッションへ移る", "\(HotKey.display) jumps to a waiting session")

@@ -82,6 +82,7 @@ enum SelfTest {
             let parsed = try? JSONValue.parse(text)
             check(parsed?.serialized() == text, "読んで書き戻すと元と同じになる")
             check((try? JSONValue.parse("{\"a\": }")) == nil, "壊れた JSON は読まない")
+            check(JSONValue.ParseError().localizedDescription == Strings.invalidJSON, "読めなかった理由を文で出せる")
         }
 
         // フックの登録

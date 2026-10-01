@@ -63,6 +63,10 @@ final class SettingsWindowController: NSWindowController {
         hotKeyCheckbox.action = #selector(toggleHotKey)
 
         messageLabel.font = .systemFont(ofSize: 11)
+        // エラーの文は長くなる。窓の幅は変えずに折り返す
+        messageLabel.lineBreakMode = .byWordWrapping
+        messageLabel.maximumNumberOfLines = 0
+        messageLabel.preferredMaxLayoutWidth = 420 - 24 * 2 - Self.labelWidth - 10
         // 文字が無いときは畳む。空のまま置くと、その行のぶんだけ間延びする
         messageLabel.isHidden = true
         messageRow.isHidden = true
@@ -147,7 +151,10 @@ final class SettingsWindowController: NSWindowController {
             if Connection.isConnected { try Connection.disconnect() } else { try Connection.connect() }
             report("")
         } catch {
-            report("\(Strings.connectFailed): \(Connection.settingsURL.path)", failed: true)
+            // 何が起きたかを出す。書き込めないのか、JSON が壊れているのかで、利用者のやることが違う
+            report(
+                "\(Strings.connectFailed): \(Paths.display(Connection.settingsURL))\n\(error.localizedDescription)",
+                failed: true)
         }
         showConnection()
         NotificationCenter.default.post(name: .connectionChanged, object: nil)

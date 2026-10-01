@@ -98,7 +98,10 @@ enum JSONValue: Equatable {
 
     // MARK: - 読み込み
 
-    struct ParseError: Error {}
+    /// 読めなかったことを、設定の窓にそのまま出せる文で言う
+    struct ParseError: LocalizedError {
+        var errorDescription: String? { Strings.invalidJSON }
+    }
 
     static func parse(_ text: String) throws -> JSONValue {
         var parser = Parser(scalars: Array(text.unicodeScalars))
