@@ -47,8 +47,10 @@ If you keep Claude Code's settings somewhere else with `CLAUDE_CONFIG_DIR`, choo
 that folder under **Config Folder** before connecting. An app opened from the
 Finder or the Dock does not see variables set in your shell, so Hawky only picks
 up `CLAUDE_CONFIG_DIR` when it was started from a shell that has it. A folder
-chosen in Settings wins over the variable. The waiting-session files stay in
-`~/.claude/hawky/pending/` either way.
+chosen in Settings wins over the variable. If Hawky is connected when you change
+the folder, it moves its hooks: they are taken out of the old folder's
+`settings.json` (a backup is kept as `settings.json.bak.hawky`) and added to the
+new one. The waiting-session files stay in `~/.claude/hawky/pending/` either way.
 
 Grant Accessibility access when Hawky asks — it needs it to bring windows to the
 front.

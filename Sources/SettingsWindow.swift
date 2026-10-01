@@ -161,7 +161,7 @@ final class SettingsWindowController: NSWindowController {
     }
 
     /// Claude Code の設定フォルダを選ぶ。Finder から開いたアプリには CLAUDE_CONFIG_DIR が届かないので、ここで合わせる。
-    /// 既定と同じフォルダを選んだら、選んだ記録を消して既定に戻す
+    /// 既定と同じフォルダを選んだら、選んだ記録を消して既定に戻す。つないでいたら、フックも新しいフォルダへ付け替える
     @objc private func chooseFolder() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -175,8 +175,19 @@ final class SettingsWindowController: NSWindowController {
 
         let fallback = Paths.claudeDir(
             chosen: nil, environment: ProcessInfo.processInfo.environment, home: Paths.home)
+        let previous = Paths.claudeDir
         Preferences.claudeDir = url.standardizedFileURL == fallback.standardizedFileURL ? nil : url.path
-        report("")
+        // フックも前のフォルダから新しいフォルダへ移す。失敗してもフォルダの選択は残し、どのファイルかを出す
+        do {
+            try Connection.move(from: previous, to: Paths.claudeDir)
+            report("")
+        } catch let error as Connection.MoveError {
+            report(
+                "\(Strings.connectFailed): \(Paths.display(error.url))\n\(error.underlying.localizedDescription)",
+                failed: true)
+        } catch {
+            report("\(Strings.connectFailed)\n\(error.localizedDescription)", failed: true)
+        }
         showConnection()
         NotificationCenter.default.post(name: .connectionChanged, object: nil)
     }

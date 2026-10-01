@@ -121,6 +121,70 @@ enum SelfTest {
             check(disconnected["hooks"]?["PreToolUse"] != nil, "外してもほかのフックは残す")
         }
 
+        // 設定フォルダを移したときの付け替え。一時フォルダの中で本物のファイルを書いて確かめる
+        do {
+            let fm = FileManager.default
+            let root = fm.temporaryDirectory.appendingPathComponent("hawky-selftest-\(UUID().uuidString)")
+            defer { try? fm.removeItem(at: root) }
+            let exe = "/Applications/Hawky.app/Contents/MacOS/Hawky"
+            let oldDir = root.appendingPathComponent("old")
+            let newDir = root.appendingPathComponent("new")
+            func read(_ dir: URL) -> JSONValue? {
+                (try? String(contentsOf: dir.appendingPathComponent("settings.json"), encoding: .utf8))
+                    .flatMap { try? JSONValue.parse($0) }
+            }
+            func put(_ dir: URL, _ text: String) {
+                try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+                try? text.write(to: dir.appendingPathComponent("settings.json"), atomically: true, encoding: .utf8)
+            }
+            let other = #"{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "node check.mjs" }] }"#
+            let mine = #"{ "hooks": [{ "type": "command", "command": "'\#(exe)' hook stop" }] }"#
+            put(oldDir, #"{ "hooks": { "PreToolUse": [\#(other)], "Stop": [\#(mine)] } }"#)
+            put(newDir, #"{ "theme": "dark" }"#)
+
+            let moved = (try? Connection.move(from: oldDir, to: newDir, executable: exe)) ?? false
+            check(moved, "つないでいれば新しいフォルダへ付け替える")
+            check(read(oldDir).map(Connection.containsMine) == false, "前のフォルダから自分のフックを外す")
+            check(read(oldDir)?["hooks"]?["PreToolUse"] != nil, "前のフォルダのほかのフックは残す")
+            check(
+                fm.fileExists(atPath: oldDir.appendingPathComponent("settings.json.bak.hawky").path),
+                "外す前に前のフォルダの控えを取る")
+            check(read(newDir).map(Connection.containsMine) == true, "新しいフォルダに登録する")
+            check(read(newDir)?["theme"]?.stringValue == "dark", "新しいフォルダのほかの設定は残す")
+
+            let snapshot = read(newDir)
+            let again = (try? Connection.move(from: oldDir, to: newDir, executable: exe)) ?? true
+            check(!again && read(newDir) == snapshot, "もう一度流しても何も変わらない")
+
+            let empty = root.appendingPathComponent("empty")
+            let fresh = root.appendingPathComponent("fresh")
+            put(empty, #"{ "hooks": { "PreToolUse": [\#(other)] } }"#)
+            let untouched = (try? Connection.move(from: empty, to: fresh, executable: exe)) ?? true
+            check(!untouched && !fm.fileExists(atPath: fresh.path), "つないでいなければ新しいフォルダにも入れない")
+
+            let broken = root.appendingPathComponent("broken")
+            put(broken, "{ \"hooks\": ")
+            do {
+                try Connection.move(from: broken, to: fresh, executable: exe)
+                check(false, "読めない設定ファイルでは止める")
+            } catch let error as Connection.MoveError {
+                check(
+                    error.url.lastPathComponent == "settings.json"
+                        && error.url.deletingLastPathComponent().lastPathComponent == "broken",
+                    "読めない設定ファイルでは止め、どのファイルかを返す")
+            } catch {
+                check(false, "読めない設定ファイルでは止め、どのファイルかを返す")
+            }
+            check(
+                (try? String(contentsOf: broken.appendingPathComponent("settings.json"), encoding: .utf8))
+                    == "{ \"hooks\": ",
+                "読めない設定ファイルは書き換えない")
+            check(
+                (try? Connection.move(from: newDir, to: newDir, executable: exe)) == false
+                    && read(newDir).map(Connection.containsMine) == true,
+                "同じフォルダを選び直しても外さない")
+        }
+
         // Claude Code の設定フォルダ。窓で選んだもの、CLAUDE_CONFIG_DIR、~/.claude の順
         do {
             let home = URL(fileURLWithPath: "/Users/me")

@@ -16,6 +16,9 @@ Versions up to v0.1.5 predate this file; their history is in `git log`.
 ### Fixed
 
 - When connecting to Claude Code fails, Settings shows the reason instead of only the file path.
+- Changing the config folder in Settings moves Hawky's hooks to the new folder instead of
+  leaving them behind in the old `settings.json`. Errors name the file that could not be
+  updated.
 
 ### Internal
 

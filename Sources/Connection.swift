@@ -30,8 +30,56 @@ enum Connection {
         }
     }
 
-    static func connect() throws { try write(connecting: true) }
-    static func disconnect() throws { try write(connecting: false) }
+    static func connect() throws { try write(connecting: true, to: settingsURL) }
+    static func disconnect() throws { try write(connecting: false, to: settingsURL) }
+
+    /// どのファイルで失敗したか。設定フォルダを移したときは、前と後のどちらかで失敗しうる
+    struct MoveError: Error {
+        let url: URL
+        let underlying: Error
+    }
+
+    /// 設定フォルダを移したときに、フックを前のフォルダから新しいフォルダへ付け替える。
+    ///
+    /// **前のフォルダに残すと、そちらの Claude Code からも待ちが届き続ける。** 外すのは接続を解除するときと
+    /// 同じ書き方で、控えを取り、自分の登録だけを消す。前のフォルダに自分の登録が無ければ何も書かず、
+    /// 新しいフォルダにも入れない（つないでいなかった人を勝手につながない）。何度流しても同じ結果になる。
+    /// 付け替えたら true
+    @discardableResult
+    static func move(from oldDir: URL, to newDir: URL, executable: String = Bundle.main.executablePath ?? "") throws
+        -> Bool
+    {
+        let old = oldDir.appendingPathComponent("settings.json")
+        let new = newDir.appendingPathComponent("settings.json")
+        if old.standardizedFileURL.resolvingSymlinksInPath() == new.standardizedFileURL.resolvingSymlinksInPath() {
+            return false
+        }
+        do {
+            // 読めない設定ファイルは外さずに止める。書き戻すと利用者の設定を壊す
+            guard FileManager.default.fileExists(atPath: old.path),
+                containsMine(try JSONValue.parse(String(contentsOf: old, encoding: .utf8)))
+            else { return false }
+            try write(connecting: false, to: old, executable: executable)
+        } catch {
+            throw MoveError(url: old, underlying: error)
+        }
+        do {
+            try write(connecting: true, to: new, executable: executable)
+        } catch {
+            throw MoveError(url: new, underlying: error)
+        }
+        return true
+    }
+
+    /// 自分のフックが一つでも登録されているか。版の古い登録や Node 時代のものも数える
+    static func containsMine(_ settings: JSONValue) -> Bool {
+        guard case .object(let pairs)? = settings["hooks"] else { return false }
+        return pairs.contains { entry in
+            (entry.value.arrayValue ?? []).contains { matcher in
+                (matcher["hooks"]?.arrayValue ?? []).contains { isMine($0["command"]?.stringValue ?? "") }
+            }
+        }
+    }
 
     /// 登録の中身。どのフックで待ちを足し、どれで消すか
     static let events: [(event: String, matcher: String?, mode: String)] = [
@@ -90,7 +138,9 @@ enum Connection {
         return try? JSONValue.parse(text)
     }
 
-    private static func write(connecting: Bool) throws {
+    private static func write(
+        connecting: Bool, to settingsURL: URL, executable: String = Bundle.main.executablePath ?? ""
+    ) throws {
         let fm = FileManager.default
         var settings = JSONValue.object([])
         if fm.fileExists(atPath: settingsURL.path) {
@@ -102,7 +152,7 @@ enum Connection {
         } else {
             try fm.createDirectory(at: settingsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         }
-        let next = updated(settings, connecting: connecting, executable: Bundle.main.executablePath ?? "")
+        let next = updated(settings, connecting: connecting, executable: executable)
         try (next.serialized() + "\n").write(to: settingsURL, atomically: true, encoding: .utf8)
     }
 }
