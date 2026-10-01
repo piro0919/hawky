@@ -120,6 +120,32 @@ enum SelfTest {
             check(disconnected["hooks"]?["PreToolUse"] != nil, "外してもほかのフックは残す")
         }
 
+        // Claude Code の設定フォルダ。窓で選んだもの、CLAUDE_CONFIG_DIR、~/.claude の順
+        do {
+            let home = URL(fileURLWithPath: "/Users/me")
+            let env = ["CLAUDE_CONFIG_DIR": "/opt/claude"]
+            check(
+                Paths.claudeDir(chosen: nil, environment: [:], home: home).path == "/Users/me/.claude",
+                "何も無ければ ~/.claude")
+            check(
+                Paths.claudeDir(chosen: nil, environment: env, home: home).path == "/opt/claude",
+                "CLAUDE_CONFIG_DIR があればそこ")
+            check(
+                Paths.claudeDir(chosen: "/srv/c", environment: env, home: home).path == "/srv/c",
+                "窓で選んだものが環境変数より先")
+            check(
+                Paths.claudeDir(chosen: "", environment: ["CLAUDE_CONFIG_DIR": " "], home: home).path
+                    == "/Users/me/.claude",
+                "空の指定は無いものとして扱う")
+            check(
+                Paths.claudeDir(chosen: nil, environment: ["CLAUDE_CONFIG_DIR": "~/work/.claude"], home: home).path
+                    == "/Users/me/work/.claude",
+                "~ をホームに展開する")
+            check(Paths.display(URL(fileURLWithPath: "/Users/me/.claude"), home: home) == "~/.claude", "ホームは ~ に縮めて出す")
+            check(Paths.display(URL(fileURLWithPath: "/Users/meme"), home: home) == "/Users/meme", "名前が似ているだけなら縮めない")
+            check(Paths.pendingDir.path.hasSuffix("/.claude/hawky/pending"), "待ちの置き場は設定フォルダに合わせて動かさない")
+        }
+
         // 待ちを捨てる決まり
         do {
             let now = Date()

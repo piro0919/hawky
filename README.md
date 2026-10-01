@@ -43,6 +43,13 @@ as they are, and the file is backed up next to itself as `settings.json.bak.hawk
 first. The hooks call Hawky itself, so nothing else — not even Node — needs to be
 installed. **Disconnect** in the same place takes the hooks out.
 
+If you keep Claude Code's settings somewhere else with `CLAUDE_CONFIG_DIR`, choose
+that folder under **Config Folder** before connecting. An app opened from the
+Finder or the Dock does not see variables set in your shell, so Hawky only picks
+up `CLAUDE_CONFIG_DIR` when it was started from a shell that has it. A folder
+chosen in Settings wins over the variable. The waiting-session files stay in
+`~/.claude/hawky/pending/` either way.
+
 Grant Accessibility access when Hawky asks — it needs it to bring windows to the
 front.
 
@@ -74,7 +81,7 @@ something when there is one.
   goes away when its Claude Code process does — so closing the editor never
   leaves the count stuck. Once a command is approved and running, the wait is
   cleared without waiting for the command to finish.
-- **Settings…** holds the Claude Code connection, whether sessions waiting for
+- **Settings…** holds the Claude Code connection and its config folder, whether sessions waiting for
   a prompt are shown, the ⌃⌥H shortcut, the language (follow the system, English or
   Japanese), Launch at Login and Check for Updates.
 

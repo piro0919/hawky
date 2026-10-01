@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ~/.claude/settings.json に Hawky のフックを登録する。
+// Claude Code の settings.json に Hawky のフックを登録する。CLAUDE_CONFIG_DIR があればその中、無ければ ~/.claude。
 // 既にある他のフックは触らない。何度流しても同じ結果になる。
 //   node hook/install.mjs           … 登録
 //   node hook/install.mjs --remove  … 解除
@@ -8,7 +8,8 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const settingsPath = join(homedir(), ".claude", "settings.json");
+const configDir = process.env.CLAUDE_CONFIG_DIR?.trim() || join(homedir(), ".claude");
+const settingsPath = join(configDir.replace(/^~(?=$|\/)/, homedir()), "settings.json");
 const hookPath = join(dirname(fileURLToPath(import.meta.url)), "hawky-hook.mjs");
 const remove = process.argv.includes("--remove");
 

@@ -58,6 +58,12 @@ open ./Hawky.app --args --settings   # 設定の窓の「接続する」でフ�
 並びを保つ `JSONValue` を自前で持ち、書き出しは Node の `JSON.stringify(v, null, 2)` と同じ形にしてある
 （手元の settings.json を読んで書き戻すと1文字も変わらないことを確かめた）。
 
+settings.json の置き場は `Paths.claudeDir` が決める。設定の窓で選んだフォルダ、`CLAUDE_CONFIG_DIR`、
+`~/.claude` の順。Finder から開いたアプリにはシェルの環境変数が届かないので、窓で選べるようにした。
+既定と同じフォルダを選ぶと、選んだ記録は消える。待ちの置き場 `~/.claude/hawky/pending/` は
+設定フォルダに合わせて動かさない。フックには `CLAUDE_CONFIG_DIR` が見え、アプリには見えないことがあり、
+動かすと両者の置き場が食い違う。
+
 `hook/` の Node 版は、v0.1.x で `install.mjs` を叩いた人のフックが壊れないよう、アプリに同梱し続けている。
 メニューから接続し直すと Node 版のフックは外れる。
 

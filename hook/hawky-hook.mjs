@@ -18,6 +18,8 @@ import { execFileSync } from "node:child_process";
 import { basename, join } from "node:path";
 
 const mode = process.argv[2] === "add" ? "add" : "clear";
+// CLAUDE_CONFIG_DIR があっても ~/.claude に置く。Finder から開いたアプリにはその環境変数が届かず、
+// 置き場を合わせられない。アプリの Paths.pendingDir と同じ場所
 const dir = join(homedir(), ".claude", "hawky", "pending");
 
 let input = {};

@@ -7,6 +7,7 @@ import ServiceManagement
 final class SettingsWindowController: NSWindowController {
     private let connectionLabel = NSTextField(labelWithString: "")
     private let connectionButton = NSButton(title: "", target: nil, action: nil)
+    private let folderLabel = NSTextField(labelWithString: "")
     private let languagePopUp = NSPopUpButton()
     private let launchCheckbox = NSButton(checkboxWithTitle: Strings.launchAtLogin, target: nil, action: nil)
     private let finishedCheckbox = NSButton(checkboxWithTitle: Strings.showsFinished, target: nil, action: nil)
@@ -42,6 +43,12 @@ final class SettingsWindowController: NSWindowController {
         // 見出しだけが上に浮く。先に中身を入れておく
         showConnection()
 
+        // 長いパスは真ん中を詰める。窓の幅は広げない
+        folderLabel.lineBreakMode = .byTruncatingMiddle
+        folderLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        let folderButton = NSButton(title: Strings.chooseFolder, target: self, action: #selector(chooseFolder))
+        folderButton.bezelStyle = .rounded
+
         languagePopUp.target = self
         languagePopUp.action = #selector(changeLanguage)
         for language in Language.allCases {
@@ -69,6 +76,7 @@ final class SettingsWindowController: NSWindowController {
 
         let stack = NSStackView(views: [
             row(Strings.claudeCode, connectionLabel, connectionButton),
+            row(Strings.configFolder, folderLabel, folderButton),
             divider(),
             aligned(finishedCheckbox),
             aligned(hotKeyCheckbox),
@@ -127,6 +135,8 @@ final class SettingsWindowController: NSWindowController {
         connectionLabel.stringValue = connected ? Strings.connected : Strings.disconnected
         connectionLabel.textColor = connected ? .labelColor : .systemOrange
         connectionButton.title = connected ? Strings.disconnect : Strings.connect
+        folderLabel.stringValue = Paths.display(Paths.claudeDir)
+        folderLabel.toolTip = Paths.claudeDir.path
         window?.contentView?.layoutSubtreeIfNeeded()
     }
 
@@ -139,6 +149,27 @@ final class SettingsWindowController: NSWindowController {
         } catch {
             report("\(Strings.connectFailed): \(Connection.settingsURL.path)", failed: true)
         }
+        showConnection()
+        NotificationCenter.default.post(name: .connectionChanged, object: nil)
+    }
+
+    /// Claude Code の設定フォルダを選ぶ。Finder から開いたアプリには CLAUDE_CONFIG_DIR が届かないので、ここで合わせる。
+    /// 既定と同じフォルダを選んだら、選んだ記録を消して既定に戻す
+    @objc private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = false
+        panel.allowsMultipleSelection = false
+        // .claude は隠しフォルダなので、見せないと選べない
+        panel.showsHiddenFiles = true
+        panel.directoryURL = Paths.claudeDir
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let fallback = Paths.claudeDir(
+            chosen: nil, environment: ProcessInfo.processInfo.environment, home: Paths.home)
+        Preferences.claudeDir = url.standardizedFileURL == fallback.standardizedFileURL ? nil : url.path
+        report("")
         showConnection()
         NotificationCenter.default.post(name: .connectionChanged, object: nil)
     }

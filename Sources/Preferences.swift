@@ -5,6 +5,7 @@ import Foundation
 enum Preferences {
     private static let showsFinishedKey = "showsFinished"
     private static let hotKeyKey = "hotKey"
+    private static let claudeDirKey = "claudeDir"
 
     /// 作業を終えて次の指示を待っているセッションも、一覧に出すか
     static var showsFinished: Bool {
@@ -19,6 +20,12 @@ enum Preferences {
             UserDefaults.standard.set(newValue, forKey: hotKeyKey)
             NotificationCenter.default.post(name: .hotKeyChanged, object: nil)
         }
+    }
+
+    /// 設定の窓で選んだ Claude Code の設定フォルダ。選んでいなければ nil で、CLAUDE_CONFIG_DIR か ~/.claude を使う
+    static var claudeDir: String? {
+        get { UserDefaults.standard.string(forKey: claudeDirKey) }
+        set { UserDefaults.standard.set(newValue, forKey: claudeDirKey) }
     }
 }
 

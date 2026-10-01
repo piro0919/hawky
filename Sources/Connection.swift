@@ -1,10 +1,11 @@
 import Foundation
 
-/// `~/.claude/settings.json` に Hawky のフックを登録する・外す。メニューの「Claude Code に接続」から呼ぶ。
+/// Claude Code の `settings.json`（既定は `~/.claude/settings.json`）に Hawky のフックを登録する・外す。メニューの「Claude Code に接続」から呼ぶ。
 /// 既にある他のフックは触らない。何度流しても同じ結果になる。
 /// 以前はターミナルで install.mjs を叩いてもらっていた。そこで止まる人が出るので、アプリの中で済ませる
 enum Connection {
-    static var settingsURL: URL { Paths.home.appendingPathComponent(".claude/settings.json") }
+    /// 置き場は `Paths.claudeDir` が決める。CLAUDE_CONFIG_DIR や設定の窓で移せる
+    static var settingsURL: URL { Paths.claudeDir.appendingPathComponent("settings.json") }
 
     /// フックとして登録するコマンド。今動いているアプリの実行ファイルを指す。
     /// アプリを別の場所へ動かしたら、接続し直すと新しい場所に向け直される
