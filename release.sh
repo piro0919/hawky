@@ -69,7 +69,10 @@ fi
 codesign --verify --deep --strict "$APP" || fail "できたアプリの署名が壊れています"
 # 暫定署名で配ると、更新のたびに利用者の許可が外れる。決まった証明書で署名できたときだけ進む
 SIGN_IDENTITY="${HAWKY_SIGN_IDENTITY:-Okigae Dev}"
-if ! codesign -dvv "$APP" 2>&1 | grep -qx "Authority=${SIGN_IDENTITY}"; then
+# 出力は変数に受けてから調べる。grep -q が一致した時点で読むのをやめると codesign が SIGPIPE で落ち、
+# pipefail の下では正しく署名されていても失敗とみなされる
+SIGNATURE="$(codesign -dvv "$APP" 2>&1)"
+if ! grep -qx "Authority=${SIGN_IDENTITY}" <<<"$SIGNATURE"; then
   fail "「${SIGN_IDENTITY}」で署名されていません。証明書がキーチェーンにあるか確かめてください"
 fi
 
