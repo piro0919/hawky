@@ -41,7 +41,7 @@ export default async function Page({ params }: PageProps) {
   const t = await getTranslations();
   const flow = t.raw("flow.steps") as Step[];
   const install = t.raw("install.steps") as Step[];
-  const features = ["title_match", "tabs", "clears", "finished"] as const;
+  const features = ["title_match", "tabs", "clears", "finished", "working"] as const;
   const shot = locale === "ja" ? "/shot-menu-ja.png" : "/shot-menu-en.png";
 
   return (
@@ -82,7 +82,7 @@ export default async function Page({ params }: PageProps) {
             <Image
               alt=""
               className="w-full max-w-md rounded-3xl shadow-[0_30px_70px_-20px_rgba(60,10,0,0.6)] ring-4 ring-white/30"
-              height={596}
+              height={720}
               priority
               src={shot}
               width={locale === "ja" ? 776 : 768}

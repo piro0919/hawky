@@ -61,7 +61,13 @@ something when there is one.
 ## What it does
 
 - **Counts the sessions that are waiting.** The number sits next to the hawk in
-  the menu bar. With nothing waiting, the hawk is dimmed.
+  the menu bar, after a pause mark. With nothing waiting, the hawk is dimmed.
+- **Shows how many sessions are working.** While Claude Code works on a prompt,
+  a small spinner and the number of working sessions appear next to the hawk,
+  fainter than the permission count, which now carries a pause mark. When both
+  are present they are stacked: permission waits on top, working sessions
+  below. The spinner holds still when *Reduce motion* is on. Working sessions
+  are also listed under *Working* in the menu.
 - **Also lists sessions waiting for your next prompt.** When Claude Code has
   finished and waits for you, the session is listed under *Waiting for your
   next prompt*, apart from the permission waits. It does not add to the count,
@@ -93,11 +99,13 @@ Claude Code fires a `Notification` hook with `permission_prompt` when it stops
 to ask. Hawky's hook writes one small file per waiting session to
 `~/.claude/hawky/pending/`, with the session's title read from the end of its
 transcript, the folder it was opened in, the ID of its Claude Code process and
-the app it runs in. `PostToolUse`, `UserPromptSubmit` and `Stop` delete it
-again, and `Stop` marks the session as waiting for a prompt until the next one
-arrives. The
-hook is Hawky's own binary, run as `Hawky hook add`, `stop` or `clear`; it takes a few milliseconds. The app watches that folder and
-does nothing else in the background.
+the app it runs in. `UserPromptSubmit` and `PostToolUse` mark the session as
+working, and `Stop` and `StopFailure` mark it as waiting for a prompt until the
+next one arrives. Pressing Esc fires no hook, so Hawky reads the end of the
+transcript for Claude Code's interruption note and drops the working session.
+The hook is Hawky's own binary, run as `Hawky hook add`, `work`, `resume` or
+`stop`; it takes a few milliseconds. The app watches that folder, and redraws
+the menu bar only while a session is working.
 
 When you pick a row, it looks for the session in this order:
 

@@ -6,10 +6,14 @@ its release notes, and stops if that section is missing or empty — so before r
 
 Versions up to v0.1.5 predate this file; their history is in `git log`.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-07
 
 ### Added
 
+- The menu bar shows how many sessions are working, with a small spinner, below the
+  permission count, which now carries a pause mark. Working sessions are listed under
+  *Working* in the menu. Pressing Esc is picked up from the transcript, since Claude Code
+  fires no hook for it. Reconnect from Settings to register the new hooks.
 - Hawky honors `CLAUDE_CONFIG_DIR`, and Settings has a Config Folder picker that takes
   precedence over it — useful because an app opened from Finder does not see shell variables.
 

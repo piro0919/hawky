@@ -68,7 +68,7 @@ swiftc \
   -o "$APP/Contents/MacOS/Hawky" \
   Sources/Paths.swift Sources/Store.swift Sources/Focus.swift Sources/Strings.swift \
   Sources/JSONValue.swift Sources/Hook.swift Sources/Connection.swift Sources/SettingsWindow.swift Sources/Preferences.swift \
-  Sources/Updater.swift Sources/SelfTest.swift Sources/main.swift
+  Sources/Updater.swift Sources/StatusTitle.swift Sources/SelfTest.swift Sources/main.swift
 
 # アイコンは Tools/make-icon.py で書き出したもの
 cp Resources/AppIcon.icns Resources/StatusIcon.png Resources/StatusIcon@2x.png "$APP/Contents/Resources/"

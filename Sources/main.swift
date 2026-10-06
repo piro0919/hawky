@@ -7,13 +7,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var watcher: DispatchSourceFileSystemObject?
     private var timer: Timer?
+    /// 作業中の輪を回す。作業中が無ければ止めておく
+    private var animation: Timer?
+    /// 回さないときの位置
+    private var phase: CGFloat = 0.5
     private var pending: [Pending] = []
     private var settingsWindow = SettingsWindowController()
     private lazy var hotKey = HotKey { [weak self] in self?.revealOldest() }
 
     /// 一覧に出すもの。終わったセッションは設定で隠せる
     private var visible: [Pending] {
-        Preferences.showsFinished ? pending : pending.filter { $0.kind == .permission }
+        Preferences.showsFinished ? pending : pending.filter { $0.kind != .finished }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -75,20 +79,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func refresh() {
         pending = Store.load()
-        // 数字は許可待ちだけ。終わったセッションは急がないので数えない
-        let count = visible.filter { $0.kind == .permission }.count
+        updateAnimation()
+        drawStatus()
+    }
+
+    private var waitingCount: Int { pending.filter { $0.kind == .permission }.count }
+    private var workingCount: Int { pending.filter { $0.kind == .working }.count }
+
+    /// 数字は許可待ちと作業中だけ。終わったセッションは急がないので数えない
+    private func drawStatus() {
         guard let button = item.button else { return }
-        statusIcon?.accessibilityDescription = Strings.statusDescription
-        button.image = statusIcon
+        let waiting = waitingCount
+        let working = workingCount
         // 何も無いときは影絵を薄くする。終わったセッションだけのときは、数字を出さずに濃くする
         button.appearsDisabled = visible.isEmpty
-        button.title = count > 0 ? " \(count)" : ""
+        guard waiting > 0 || working > 0 else {
+            statusIcon?.accessibilityDescription = Strings.statusDescription
+            button.image = statusIcon
+            button.title = ""
+            return
+        }
+        // 影絵ごと絵に描く。両方あれば2段、片方だけなら1段
+        let image = StatusTitle.image(icon: statusIcon, waiting: waiting, working: working, phase: phase)
+        image.accessibilityDescription = Strings.statusSummary(waiting: waiting, working: working)
+        button.title = ""
+        button.image = image
+    }
+
+    /// 作業中があるあいだだけ輪を回す。「視差効果を減らす」を選んでいれば回さずに止めて出す
+    private func updateAnimation() {
+        let moves = workingCount > 0 && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard moves != (animation != nil) else { return }
+        guard moves else {
+            animation?.invalidate()
+            animation = nil
+            phase = 0.5
+            return
+        }
+        // 0.8 秒で一周する。メニューを開いているあいだも回るよう、common のモードに載せる
+        let interval = 1.0 / 15
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.phase = (self.phase + CGFloat(interval / 0.8)).truncatingRemainder(dividingBy: 1)
+                self.drawStatus()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        animation = timer
     }
 
     /// キーを押した。一番古い許可待ちへ、無ければ一番古い終わったセッションへ飛ぶ
     private func revealOldest() {
         refresh()
-        guard let target = visible.first(where: { $0.kind == .permission }) ?? visible.first else {
+        // 作業中のセッションは急がないので飛び先にしない
+        guard
+            let target = visible.first(where: { $0.kind == .permission })
+                ?? visible.first(where: { $0.kind == .finished })
+        else {
             NSSound.beep()
             return
         }
@@ -108,24 +156,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(.separator())
         }
 
-        let waiting = visible.filter { $0.kind == .permission }
-        let finished = visible.filter { $0.kind == .finished }
+        // 急ぐものから並べる。許可待ち、作業中、指示待ちの順
+        let sections = [
+            (Strings.permissionHeader, Pending.Kind.permission),
+            (Strings.workingHeader, .working),
+            (Strings.finishedHeader, .finished),
+        ].map { header, kind in (header, visible.filter { $0.kind == kind }) }.filter { !$0.1.isEmpty }
 
-        if waiting.isEmpty && finished.isEmpty {
+        if sections.isEmpty {
             let empty = NSMenuItem(title: Strings.nothingWaiting, action: nil, keyEquivalent: "")
             empty.isEnabled = false
             menu.addItem(empty)
         }
-        // 指示待ちがあるときは、両方に見出しを付けて分ける。片方にだけ付けると、
-        // 見出しの無い側が何の行なのか分からない
-        if !waiting.isEmpty {
-            if !finished.isEmpty { menu.addItem(.sectionHeader(title: Strings.permissionHeader)) }
-            for p in waiting { menu.addItem(row(for: p)) }
-        }
-        if !finished.isEmpty {
-            if !waiting.isEmpty { menu.addItem(.separator()) }
-            menu.addItem(.sectionHeader(title: Strings.finishedHeader))
-            for p in finished { menu.addItem(row(for: p)) }
+        // 2種類以上あるときは、すべてに見出しを付けて分ける。一部にだけ付けると、
+        // 見出しの無い側が何の行なのか分からない。許可待ちだけなら見出しは要らない
+        for (index, (header, items)) in sections.enumerated() {
+            if index > 0 { menu.addItem(.separator()) }
+            if sections.count > 1 || items.first?.kind != .permission { menu.addItem(.sectionHeader(title: header)) }
+            for p in items { menu.addItem(row(for: p)) }
         }
         menu.addItem(.separator())
 

@@ -1,9 +1,10 @@
 import Foundation
 
 struct Pending {
-    /// 何を待っているか。許可の返事か、次の指示か
+    /// 何を待っているか。許可の返事か、次の指示か。作業中は何も待っていない
     enum Kind: String {
         case permission
+        case working
         case finished
     }
 
@@ -20,6 +21,8 @@ struct Pending {
     var app: String = ""
     /// 古い記録には無い。そのときは許可待ち
     var kind: Kind = .permission
+    /// 中断の記録を探す transcript。古い記録には無い
+    var transcript: String = ""
 
     /// 一覧に出す名前。Cursor の窓の名前と同じ `<題名> — <フォルダ名>` の形にする。
     /// 1つの窓に複数のセッションがあると、フォルダ名だけでは行の見分けが付かない
@@ -65,10 +68,22 @@ enum Store {
 
             let at = Date(timeIntervalSince1970: (obj["at"] as? Double) ?? 0)
             let pid = (obj["pid"] as? Int32) ?? Int32((obj["pid"] as? Int) ?? 0)
-            let kind = (obj["kind"] as? String).flatMap(Pending.Kind.init(rawValue:)) ?? .permission
-            if isStale(at: at, pid: pid, kind: kind) {
+            var kind = (obj["kind"] as? String).flatMap(Pending.Kind.init(rawValue:)) ?? .permission
+            let transcript = (obj["transcript"] as? String) ?? ""
+            if isStale(at: at, pid: pid)
+                || (kind == .working && Hook.interrupted(transcript, since: at))
+            {
                 try? fm.removeItem(at: file)
                 continue
+            }
+            // 許可された待ちは、作業中に移す。消してしまうと、次のツールが終わるまで一覧から抜ける
+            if kind != settled(kind, at: at, pid: pid) {
+                kind = .working
+                var next = obj
+                next["kind"] = kind.rawValue
+                if let out = try? JSONSerialization.data(withJSONObject: next) {
+                    try? out.write(to: file, options: .atomic)
+                }
             }
             out.append(
                 Pending(
@@ -78,20 +93,34 @@ enum Store {
                     title: (obj["title"] as? String) ?? "",
                     at: at,
                     app: (obj["app"] as? String) ?? "",
-                    kind: (obj["kind"] as? String).flatMap(Pending.Kind.init(rawValue:)) ?? .permission
+                    kind: kind,
+                    transcript: transcript
                 ))
         }
         // 古い待ちほど気付かれていない。上に置く
         return out.sorted { $0.at < $1.at }
     }
 
-    static func isStale(at: Date, pid: Int32, kind: Pending.Kind = .permission, now: Date = Date()) -> Bool {
+    /// 記録の種類だけを読む。フックが、書き直すかどうかを決めるのに使う
+    static func kind(of file: URL) -> Pending.Kind? {
+        guard let data = try? Data(contentsOf: file),
+            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return (obj["kind"] as? String).flatMap(Pending.Kind.init(rawValue:))
+    }
+
+    /// 捨てるか。許可された待ちは捨てずに作業中へ移すので、ここでは見ない（`load` が見る）
+    static func isStale(at: Date, pid: Int32, now: Date = Date()) -> Bool {
         let age = now.timeIntervalSince(at)
         guard pid > 0 else { return age > expiryWithoutProcess }
-        if age > expiryWithProcess || !isAlive(pid) || isOrphanedFromEditor(pid) { return true }
-        // 終わったセッションは、指示を打てば UserPromptSubmit で消える。裏で動かしている
-        // 開発サーバーが子を起こすこともあるので、子の起動では消さない
-        return kind == .permission && startedWork(pid, since: at)
+        return age > expiryWithProcess || !isAlive(pid) || isOrphanedFromEditor(pid)
+    }
+
+    /// 子のプロセスの起動を見て、種類を決め直す。許可待ちは子が起動したら作業中に移る。
+    /// 終わったセッションは、指示を打てば UserPromptSubmit で作業中になる。裏で動かしている
+    /// 開発サーバーが子を起こすこともあるので、子の起動では変えない
+    static func settled(_ kind: Pending.Kind, at: Date, pid: Int32) -> Pending.Kind {
+        kind == .permission && pid > 0 && startedWork(pid, since: at) ? .working : kind
     }
 
     /// 許可されたか。Claude Code には「許可された」ときに届くフックが無く、届くのは

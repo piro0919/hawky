@@ -18,7 +18,7 @@
       },
       {
         "title": "The count shows up",
-        "body": "The number of permission waits appears next to the hawk. Nothing pops up to interrupt you."
+        "body": "The number of permission waits appears next to the hawk, with the number of working sessions and a small spinner beside it. Nothing pops up to interrupt you."
       },
       {
         "title": "One click takes you there",
@@ -43,6 +43,10 @@
     "finished": {
       "title": "Shows who is waiting for a prompt",
       "body": "A session that has finished and is waiting for your next prompt is listed on its own, without adding to the count."
+    },
+    "working": {
+      "title": "Counts working sessions too",
+      "body": "The number of sessions Claude Code is working on sits under the permission count, with a small spinner. A session you stop with Esc drops out of it."
     }
   },
   "install": {
@@ -75,16 +79,16 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "updated": "Last updated: September 26, 2026",
+    "updated": "Last updated: October 7, 2026",
     "intro": "Hawky notices when Claude Code is waiting and brings the right tab to the front. That's the whole app. It has no server, no analytics, and no account.",
     "sections": [
       {
         "title": "What it reads",
-        "body": "Hawky's Claude Code hook writes a small file for each session that is waiting for permission or for your next prompt: the session ID, the folder it was opened in, the session title from the end of its transcript, the ID of its Claude Code process, the app it runs in, and the time. The app reads those files, and the titles of Cursor's and VS Code's windows and tabs so it can find the right one. It does not read your code or your conversations."
+        "body": "Hawky's Claude Code hook writes a small file for each session that is working, or waiting for permission or for your next prompt: the session ID, the folder it was opened in, the session title from the end of its transcript, where the transcript is, the ID of its Claude Code process, the app it runs in, and the time. The app reads those files, and the titles of Cursor's and VS Code's windows and tabs so it can find the right one. For a working session, it reads the end of the transcript to tell whether you stopped it with Esc, looking only for the note Claude Code leaves when that happens. It does not otherwise read your code or your conversations."
       },
       {
         "title": "Nothing leaves the Mac",
-        "body": "Those files live in ~/.claude/hawky/pending and are deleted as soon as the session moves on. Nothing is collected or uploaded. There is nowhere for it to be uploaded to."
+        "body": "Those files live in ~/.claude/hawky/pending and are deleted when the session's Claude Code process ends. Nothing is collected or uploaded. There is nowhere for it to be uploaded to."
       },
       {
         "title": "Update checks go to GitHub",

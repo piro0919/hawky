@@ -85,11 +85,13 @@ enum Connection {
     static let events: [(event: String, matcher: String?, mode: String)] = [
         // 許可を求められたら1件足す
         ("Notification", "permission_prompt", "add"),
-        // そのセッションが動き出したら消す。許可・拒否・入力のどれでも解消とみなす
-        ("PostToolUse", "*", "clear"),
-        ("UserPromptSubmit", nil, "clear"),
-        // 作業を終えて次の指示を待つ。許可待ちが残っていれば、それも置き換わる
+        // 指示を受けたら作業中にする。許可待ちや指示待ちは、これで置き換わる
+        ("UserPromptSubmit", nil, "work"),
+        // ツールが動いたら作業中に戻す。許可待ちのあとに許可されたとき、ここで戻る
+        ("PostToolUse", "*", "resume"),
+        // 作業を終えて次の指示を待つ。API のエラーで止まったときも、次の指示を待つことには変わりない
         ("Stop", nil, "stop"),
+        ("StopFailure", nil, "stop"),
     ]
 
     /// 設定を読み、自分のフックを全部外してから、必要なら入れ直して書き戻す

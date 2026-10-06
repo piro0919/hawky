@@ -46,6 +46,11 @@ enum Strings {
     static var nothingWaiting: String { t("待機中のセッションはありません", "No session is waiting") }
     static var notConnected: String { t("Claude Code に接続されていません", "Not connected to Claude Code") }
     static var permissionHeader: String { t("許可待ち", "Waiting for permission") }
+    static var workingHeader: String { t("作業中", "Working") }
+    static func statusSummary(waiting: Int, working: Int) -> String {
+        t("Claude Code の許可待ち \(waiting) 件、作業中 \(working) 件",
+          "Claude Code: \(waiting) waiting for permission, \(working) working")
+    }
     static var finishedHeader: String { t("指示待ち", "Waiting for your next prompt") }
     static var settings: String { t("設定…", "Settings…") }
     static var quit: String { t("終了", "Quit") }

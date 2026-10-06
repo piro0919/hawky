@@ -227,14 +227,13 @@ enum SelfTest {
             server.arguments = ["5"]
             let since = Date().addingTimeInterval(-10)
             try? server.run()
-            check(
-                !Store.isStale(at: since, pid: getpid(), kind: .finished, now: Date()),
-                "終わったセッションは子が起動しても残す")
-            check(Store.isStale(at: since, pid: getpid(), kind: .permission, now: Date()), "許可待ちは子が起動したら消す")
+            check(Store.settled(.finished, at: since, pid: getpid()) == .finished, "終わったセッションは子が起動しても残す")
+            check(Store.settled(.permission, at: since, pid: getpid()) == .working, "許可待ちは子が起動したら作業中に移す")
+            check(!Store.isStale(at: since, pid: getpid(), now: Date()), "子が起動しても、プロセスが居れば捨てない")
             server.terminate()
             check(Store.isStale(at: now.addingTimeInterval(-61 * 60), pid: 0, now: now), "番号が無ければ1時間で捨てる")
 
-            // 許可されてコマンドが動き出したら、終わるのを待たずに消す
+            // 許可されてコマンドが動き出したら、終わるのを待たずに作業中へ移す
             let child = Process()
             child.executableURL = URL(fileURLWithPath: "/bin/sleep")
             child.arguments = ["5"]
@@ -263,6 +262,28 @@ enum SelfTest {
                 title: String(repeating: "あ", count: 50), at: Date())
             check(long.label.hasSuffix("… — hawky"), "長い題名は詰める")
             check(long.label.count == Pending.titleLimit + 1 + " — hawky".count, "詰めた題名は上限の長さ")
+        }
+
+        // Esc で中断した記録。一時ファイルに transcript の形で書いて確かめる
+        do {
+            let file = FileManager.default.temporaryDirectory
+                .appendingPathComponent("hawky-selftest-\(UUID().uuidString).jsonl")
+            defer { try? FileManager.default.removeItem(at: file) }
+            func write(_ lines: [String]) { try? lines.joined(separator: "\n").write(to: file, atomically: true, encoding: .utf8) }
+            let stopped = #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
+            let toolStopped = #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user for tool use]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
+            let quoted = #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"[Request interrupted by user]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
+            let started = ISO8601DateFormatter().date(from: "2026-10-07T10:00:00Z")!
+            let later = ISO8601DateFormatter().date(from: "2026-10-07T10:01:00Z")!
+
+            write([stopped])
+            check(Hook.interrupted(file.path, since: started), "作業を始めたあとの中断を拾う")
+            check(!Hook.interrupted(file.path, since: later), "前の作業の中断は拾わない")
+            write([toolStopped])
+            check(Hook.interrupted(file.path, since: started), "ツールの途中の中断も拾う")
+            write([quoted])
+            check(!Hook.interrupted(file.path, since: started), "ツールの出力に混ざった文字列は拾わない")
+            check(!Hook.interrupted("", since: started), "transcript が無ければ中断とみなさない")
         }
 
         print(failures == 0 ? "selftest: ok" : "selftest: \(failures) failed")

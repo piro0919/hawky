@@ -1,9 +1,11 @@
 import Foundation
 
-/// Claude Code のフックとして呼ばれたときの入口。`Hawky hook add|stop|clear`。
-///   add   … 許可待ちが発生した（Notification / permission_prompt）
-///   stop  … 作業を終えて、次の指示を待っている（Stop）
-///   clear … そのセッションが動き出した、または指示を受けた＝待ちが解消した
+/// Claude Code のフックとして呼ばれたときの入口。`Hawky hook add|work|resume|stop|clear`。
+///   add    … 許可待ちが発生した（Notification / permission_prompt）
+///   work   … 指示を受けて作業を始めた（UserPromptSubmit）
+///   resume … ツールが動いた。許可待ちだったなら作業に戻った（PostToolUse）
+///   stop   … 作業を終えて、次の指示を待っている（Stop / StopFailure）
+///   clear  … 待ちを消す。v0.1.6 までの登録が使う
 /// 標準入力にフックの JSON が来る。画面は出さず、ファイルを1つ書くか消すだけで終わる。
 /// 以前は Node のスクリプトで、Node の入っていない Mac では動かなかった
 enum Hook {
@@ -12,6 +14,7 @@ enum Hook {
         let kind: Pending.Kind? =
             switch arguments.first {
             case "add": .permission
+            case "work", "resume": .working
             case "stop": .finished
             default: nil
             }
@@ -30,6 +33,9 @@ enum Hook {
             try? FileManager.default.removeItem(at: file)
             return 0
         }
+        // PostToolUse はツールが動くたびに飛ぶ。作業中のまま書き直すと、そのたびに transcript と
+        // プロセスを辿ることになるので、すでに作業中なら何もしない
+        if arguments.first == "resume", Store.kind(of: file) == .working { return 0 }
 
         let transcript = (input["transcript_path"] as? String) ?? ""
         let cwd = (input["cwd"] as? String) ?? ""
@@ -39,6 +45,8 @@ enum Hook {
             "cwd": cwd,
             "project": project.isEmpty ? cwd : project,
             "title": sessionTitle(transcript),
+            // 作業中に Esc で止めると、Stop のフックが飛ばない。アプリが transcript の中断の記録を読んで外す
+            "transcript": transcript,
             "pid": Int(claudeProcess()),
             // 起動元のアプリの ID は環境変数で子まで引き継がれる。Cursor なら Cursor の、
             // VS Code なら VS Code の ID が入る。どのアプリの窓を探すかはこれで決める
@@ -92,6 +100,30 @@ enum Hook {
             pid = Int32(info.pbi_ppid)
         }
         return 0
+    }
+
+    /// 指定の時刻より後に、Esc で中断した記録があるか。中断すると transcript に
+    /// `[Request interrupted by user]` か `[Request interrupted by user for tool use]` を本文に持つ
+    /// user のレコードが書かれる（手元の transcript で確かめた）。中断のあとは次の指示まで追記が止まるので、末尾だけ読む
+    static func interrupted(_ path: String, since at: Date) -> Bool {
+        guard let tail = read(path, fromEnd: true, limit: 64 * 1024) else { return false }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        for line in tail.split(separator: "\n").reversed() where line.contains("[Request interrupted by user") {
+            // ツールの出力にこの文字列が混ざることがある（transcript を grep した結果など）。
+            // 本文の text そのものが印で始まるものだけを拾う
+            guard let record = object(line), record["type"] as? String == "user",
+                let content = (record["message"] as? [String: Any])?["content"] as? [[String: Any]],
+                content.contains(where: {
+                    $0["type"] as? String == "text"
+                        && ($0["text"] as? String)?.hasPrefix("[Request interrupted by user") == true
+                }),
+                let stamp = (record["timestamp"] as? String).flatMap(formatter.date(from:))
+            else { continue }
+            // 作業中の記録の時刻は秒で切り捨ててある
+            return stamp.timeIntervalSince1970 >= at.timeIntervalSince1970.rounded(.down)
+        }
+        return false
     }
 
     private static func read(_ path: String, fromEnd: Bool, limit: Int) -> String? {
