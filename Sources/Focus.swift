@@ -65,7 +65,9 @@ enum Focus {
         log("reveal title=\(pending.title) windows=\(openWindows.count)")
         // 1. 最前面のタブがそのセッションなら、ここで終わる
         if !pending.title.isEmpty,
-            let window = openWindows.first(where: { titleMatches(of: $0, pending.title) })
+            let window = preferFolder(
+                openWindows.filter { titleMatches(of: $0, pending.title) }, pending.folderName,
+                name: { string($0, kAXTitleAttribute as String) })
         {
             raise(window, in: axApp)
             return
@@ -76,9 +78,10 @@ enum Focus {
             windowTabs(of: window).map { (window: window, tab: $0) }
         }
         if !pending.title.isEmpty,
-            let hit = nativeTabs.first(where: { entry in
-                string(entry.tab, kAXTitleAttribute as String).map { titleMatches($0, pending.title) } ?? false
-            })
+            let hit = preferFolder(
+                nativeTabs.filter { entry in
+                    string(entry.tab, kAXTitleAttribute as String).map { titleMatches($0, pending.title) } ?? false
+                }, pending.folderName, name: { string($0.tab, kAXTitleAttribute as String) })
         {
             press(hit.tab, in: hit.window, of: axApp)
             return
@@ -145,6 +148,13 @@ enum Focus {
     private static func log(_ text: @autoclosure () -> String) {
         guard CommandLine.arguments.contains("--diag") else { return }
         FileHandle.standardError.write(Data("focus: \(text())\n".utf8))
+    }
+
+    /// 題名が同じセッションは別のフォルダにもありうる（例: 2つのリポジトリで「アナリティクスの状況」）。
+    /// 名前にフォルダ名も入っているものを先に選ぶ。フォルダを開いていない窓は名前にフォルダが
+    /// 入らないので、どれも入っていなければ題名だけで当たった先頭を使う
+    static func preferFolder<T>(_ candidates: [T], _ folder: String, name: (T) -> String?) -> T? {
+        candidates.first { name($0).map { holdsFolder($0, folder) } ?? false } ?? candidates.first
     }
 
     private static func tabHoldsFolder(_ tab: AXUIElement, _ folder: String) -> Bool {

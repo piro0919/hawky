@@ -61,6 +61,13 @@ enum SelfTest {
             check(Focus.holdsFolder("状況確認 — koidamashii", "koidamashii"), "題名にフォルダ名があれば当たる")
             check(!Focus.holdsFolder("状況確認 — koidamashii", ""), "フォルダ名が空なら当てない")
             check(!Focus.holdsFolder("状況確認", "koidamashii"), "フォルダを開いていない窓には当てない")
+            let sameTitle = ["アナリティクスの状況 — koidamashii", "アナリティクスの状況 — kk-web"]
+            check(
+                Focus.preferFolder(sameTitle, "kk-web", name: { $0 }) == sameTitle[1],
+                "題名が同じならフォルダ名の合う窓を選ぶ")
+            check(
+                Focus.preferFolder(["アナリティクスの状況"], "kk-web", name: { $0 }) == "アナリティクスの状況",
+                "フォルダ名の入った窓が無ければ題名だけで選ぶ")
         }
 
         // 設定ファイルの読み書き。並びも書き方も Node の JSON.stringify(v, null, 2) と同じに戻る
@@ -269,10 +276,15 @@ enum SelfTest {
             let file = FileManager.default.temporaryDirectory
                 .appendingPathComponent("hawky-selftest-\(UUID().uuidString).jsonl")
             defer { try? FileManager.default.removeItem(at: file) }
-            func write(_ lines: [String]) { try? lines.joined(separator: "\n").write(to: file, atomically: true, encoding: .utf8) }
-            let stopped = #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
-            let toolStopped = #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user for tool use]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
-            let quoted = #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"[Request interrupted by user]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
+            func write(_ lines: [String]) {
+                try? lines.joined(separator: "\n").write(to: file, atomically: true, encoding: .utf8)
+            }
+            let stopped =
+                #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
+            let toolStopped =
+                #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user for tool use]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
+            let quoted =
+                #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"[Request interrupted by user]"}]},"timestamp":"2026-10-07T10:00:05.123Z"}"#
             let started = ISO8601DateFormatter().date(from: "2026-10-07T10:00:00Z")!
             let later = ISO8601DateFormatter().date(from: "2026-10-07T10:01:00Z")!
 
