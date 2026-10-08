@@ -48,8 +48,9 @@ enum Strings {
     static var permissionHeader: String { t("許可待ち", "Waiting for permission") }
     static var workingHeader: String { t("作業中", "Working") }
     static func statusSummary(waiting: Int, working: Int) -> String {
-        t("Claude Code の許可待ち \(waiting) 件、作業中 \(working) 件",
-          "Claude Code: \(waiting) waiting for permission, \(working) working")
+        t(
+            "Claude Code の許可待ち \(waiting) 件、作業中 \(working) 件",
+            "Claude Code: \(waiting) waiting for permission, \(working) working")
     }
     static var finishedHeader: String { t("指示待ち", "Waiting for your next prompt") }
     static var settings: String { t("設定…", "Settings…") }

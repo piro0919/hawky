@@ -128,7 +128,8 @@ enum StatusTitle {
 
                 let start = 90 - 360 * phase
                 let arc = NSBezierPath()
-                arc.appendArc(withCenter: center, radius: radius, startAngle: start, endAngle: start - 100, clockwise: true)
+                arc.appendArc(
+                    withCenter: center, radius: radius, startAngle: start, endAngle: start - 100, clockwise: true)
                 arc.lineWidth = line
                 arc.lineCapStyle = .round
                 color.setStroke()
