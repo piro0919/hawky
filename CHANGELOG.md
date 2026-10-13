@@ -6,7 +6,7 @@ its release notes, and stops if that section is missing or empty — so before r
 
 Versions up to v0.1.5 predate this file; their history is in `git log`.
 
-## Unreleased
+## [0.2.3] - 2026-10-13
 
 ### Fixed
 
