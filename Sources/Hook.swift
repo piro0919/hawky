@@ -18,6 +18,9 @@ enum Hook {
             case "stop": .finished
             default: nil
             }
+        // `claude -p` のように人が見ていない実行は、待っていても誰も応えない。Owler のジョブが
+        // 毎朝の実行のたびに指示待ちを残していた。Claude Code は無人のとき 0 を渡す（実測）
+        if ProcessInfo.processInfo.environment["CLAUDE_CODE_SESSION_ATTENDED"] == "0" { return 0 }
         let data = FileHandle.standardInput.readDataToEndOfFile()
         guard let input = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return 0 }
 
@@ -85,9 +88,13 @@ enum Hook {
         return ""
     }
 
-    /// このフックを呼んだ Claude Code のプロセス番号。フックはシェルを挟んで呼ばれるので、
-    /// 親を辿って claude という名前のプロセスを探す
+    /// このフックを呼んだ Claude Code のプロセス番号。Claude Code が CLAUDE_PID で渡す。
+    /// 渡さない古い版では、フックはシェルを挟んで呼ばれるので、親を辿って claude という名前のプロセスを探す。
+    /// 版数の名前で入れた claude はプロセス名が `2.1.283` のようになり、名前では見つからない（実測）
     static func claudeProcess() -> Int32 {
+        if let value = ProcessInfo.processInfo.environment["CLAUDE_PID"], let pid = Int32(value), pid > 1 {
+            return pid
+        }
         var pid = getppid()
         for _ in 0..<6 where pid > 1 {
             var info = proc_bsdinfo()

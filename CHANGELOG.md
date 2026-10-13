@@ -6,6 +6,15 @@ its release notes, and stops if that section is missing or empty — so before r
 
 Versions up to v0.1.5 predate this file; their history is in `git log`.
 
+## Unreleased
+
+### Fixed
+
+- Unattended runs such as `claude -p` from a scheduled job no longer show up as sessions
+  waiting for instructions. Nobody can answer them, and they stayed in the list for an hour.
+- Sessions started from a Claude Code installed under a version-numbered binary are now tied
+  to the right process, so they disappear when that process ends.
+
 ## [0.2.2] - 2026-10-09
 
 ### Changed

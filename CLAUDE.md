@@ -19,6 +19,10 @@ Claude Code のフックを使う。
 - Esc で中断すると Stop が飛ばない。transcript の末尾に `[Request interrupted by user]`
   （ツールの途中なら `… for tool use`）を本文に持つ user のレコードが残るので、作業中の記録の時刻より後に
   それがあれば外す（`Hook.interrupted`）。ツールの出力に同じ文字列が混ざるので、本文の text だけを見る
+- `claude -p` のような無人の実行（`CLAUDE_CODE_SESSION_ATTENDED=0`）は記録しない。Owler のジョブの
+  実行が、そのたびに指示待ちを残していた
+- Claude Code のプロセス番号は、Claude Code がフックに渡す `CLAUDE_PID` から取る。版数の名前で入れた
+  claude はプロセス名が `2.1.283` のようになり、親を辿って名前で探す方法では見つからなかった
 - 解消のフックが飛ばなかった待ちは、フックが残した Claude Code のプロセスが終わったときに消える。
   時間では消さない（10分で消していた頃は、長く待たせた本物の許可待ちまで消えた）。番号の無い古い記録だけ1時間で消す
 - Cursor を再起動すると、前の拡張ホストが launchd に引き取られて生き残り、Claude Code のプロセスも残る（実測）。
