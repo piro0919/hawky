@@ -33,7 +33,8 @@ enum Desktop {
 
     /// Local Storage の値は、頭の1バイトで書き方が分かれる。1 なら1バイトずつ（Latin-1）、0 なら UTF-16
     static func unreadIDs(fromLocalStorage value: [UInt8]) -> Set<String>? {
-        guard let head = value.first else { return nil }
+        // 知らない書き方なら読まない。読めなければ何も外さない
+        guard let head = value.first, head <= 1 else { return nil }
         let body = Data(value.dropFirst())
         guard let text = String(data: body, encoding: head == 1 ? .isoLatin1 : .utf16LittleEndian),
             let object = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
@@ -50,14 +51,20 @@ enum Desktop {
         let fm = FileManager.default
         let root = supportDir.appendingPathComponent("claude-code-sessions")
         var out: [String: Session] = [:]
+        var seen: Set<String> = []
         for account in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? [] {
             for org in (try? fm.contentsOfDirectory(at: account, includingPropertiesForKeys: nil)) ?? [] {
                 for file in (try? fm.contentsOfDirectory(at: org, includingPropertiesForKeys: nil)) ?? []
                 where file.pathExtension == "json" && file.lastPathComponent.hasPrefix("local_") {
+                    seen.insert(file.path)
                     for (cli, session) in cachedSession(file) { out[cli] = session }
                 }
             }
         }
+        // 消したセッションの分を、覚えておかない
+        lock.lock()
+        cache = cache.filter { seen.contains($0.key) }
+        lock.unlock()
         return out
     }
 

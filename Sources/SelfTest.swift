@@ -373,6 +373,7 @@ enum SelfTest {
                 "1バイトずつの値から未読と「未読にする」の印を読む")
             let utf16 = [UInt8](json.data(using: .utf16LittleEndian)!)
             check(Desktop.unreadIDs(fromLocalStorage: [0] + utf16) == ["local_a", "local_b"], "UTF-16 の値も読む")
+            check(Desktop.unreadIDs(fromLocalStorage: [2] + Array(json.utf8)) == nil, "知らない書き方の値は読まない")
             check(Desktop.unreadIDs(fromLocalStorage: [1] + Array("{".utf8)) == nil, "壊れた値は読まない")
 
             let state =

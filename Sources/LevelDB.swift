@@ -26,7 +26,16 @@ enum LevelDB {
                 }
             if let entry, entry.sequence > (best?.sequence ?? 0) { best = entry }
         }
+        prune(keeping: files.map(\.path), under: dir.path)
         return best
+    }
+
+    /// 圧縮の掛け直しで消えたファイルの分を、覚えておかない
+    private static func prune(keeping paths: [String], under dir: String) {
+        let alive = Set(paths)
+        lock.lock()
+        defer { lock.unlock() }
+        cache = cache.filter { !$0.key.hasPrefix(dir + "/") || alive.contains($0.key) }
     }
 
     // MARK: - 読み直しを減らす
