@@ -82,6 +82,25 @@ settings.json の置き場は `Paths.claudeDir` が決める。設定の窓で�
 Cursor なら `com.todesktop.230313mzl4w4u92`、VS Code なら `com.microsoft.VSCode`。窓を探すアプリはこれで決める。
 VS Code も窓の名前の区切りは Cursor と同じ ` — ` だった（実測）。VS Code の試し開きのタブは名前に「, preview」が付く。
 
+## Claude デスクトップアプリ
+
+待ちの記録の `app` が `com.anthropic.claudefordesktop` のセッションは、アプリの描画の直前に `Desktop.apply` が手を入れる。
+
+- デスクトップアプリは、アーカイブするまでセッションごとの Claude Code のプロセスを生かしておく（実測）。
+  「プロセスが終わったら消す」では指示待ちが消えず、開いたままのセッションが全部溜まった
+- サイドバーの未読の一覧は、アプリの Local Storage の `epitaxy-unread-v1` にある。
+  中身は `{"state":{"unreadIds":[…],"explicitUnreadIds":[…]}}` で、ID は `local_…`。Local Storage は LevelDB で、
+  表の塊が Snappy で圧縮されているので、読むだけの部品を自前で持つ（`Sources/LevelDB.swift`）
+- 指示待ちは、未読の一覧に入っているあいだだけ出す。消さずに隠すだけにして、「未読にする」で戻せるようにした。
+  未読の一覧が読めないときは何も隠さない
+- `local_…` と Claude Code のセッション ID は、`claude-code-sessions/<アカウント>/<組織>/local_*.json` の
+  `cliSessionId` と `lastAssistantCliSessionId` で結ぶ。題名もここの `title` から取る。デスクトップアプリは
+  transcript に `ai-title` を書かず `custom-title` を書く
+- 窓の名前は「Claude」だけで、セッションの題名が出ない（実測）。選んだら `claude://claude.ai/epitaxy/<local_…>` を開く。
+  これでそのセッションに切り替わる（実測）
+- リンクで2秒開いただけでは未読の印は消えなかった（実測）。何をもって既読にするかは確かめていない
+- どちらのファイルも公開された形式ではない。アプリの更新で変わったら、ここから疑う
+
 ## 作業中の表示
 
 メニューバーの数は、影絵ごと1枚の絵に描く（`StatusTitle`）。許可待ちは一時停止の印と数を濃く、作業中は

@@ -71,7 +71,10 @@ something when there is one.
 - **Also lists sessions waiting for your next prompt.** When Claude Code has
   finished and waits for you, the session is listed under *Waiting for your
   next prompt*, apart from the permission waits. It does not add to the count,
-  and it goes away as soon as you type the next prompt.
+  and it goes away as soon as you type the next prompt. In the Claude desktop
+  app it is listed only while the session is marked unread in the app's
+  sidebar, since the app keeps every open session's Claude Code process
+  running until you archive it.
 - **⌃⌥H jumps to the session that has waited longest** — a permission wait
   first, otherwise one waiting for a prompt.
 - **Takes you there in one click.** Each waiting session is a row in the menu,
@@ -81,6 +84,8 @@ something when there is one.
   the title Claude Code gave the session, not only by the folder.
 - **Works in Cursor and VS Code.** The hook notes which app the session runs
   in, and Hawky goes to that app. Split editors and preview tabs are handled.
+- **Works in the Claude desktop app.** Rows show the title from the app's
+  sidebar, and picking one opens that session through its `claude://` link.
 - **Works with windows merged into macOS tabs** (`window.nativeTabs`).
   A background tab is not in the window list at all; Hawky finds it in the tab
   bar and presses it.
@@ -114,6 +119,14 @@ When you pick a row, it looks for the session in this order:
 3. An editor tab with that title, inside the windows of that repository, and
    then behind each background macOS tab in turn
 4. Any window of that repository
+
+A session in the Claude desktop app skips these steps. The app's window is just
+called "Claude", so Hawky opens the session's `claude://` link instead. It reads
+the app's per-session records under
+`~/Library/Application Support/Claude/claude-code-sessions/` for the title and
+the link, and the sidebar's unread list from the app's Local Storage, which is a
+LevelDB database. Neither is a published format, so if a Claude update changes
+them, Hawky falls back to keeping every waiting session in the list.
 
 ## Building and checking
 

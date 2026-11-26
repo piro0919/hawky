@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Hawky — know when Claude Code is waiting for you",
-    "description": "A Mac menu bar app that tells you when Claude Code is waiting for permission or for your next prompt, and takes you to that tab in one click. Works with Cursor and VS Code."
+    "description": "A Mac menu bar app that tells you when Claude Code is waiting for permission or for your next prompt, and takes you to that tab in one click. Works with Cursor, VS Code and the Claude desktop app."
   },
   "hero": {
     "tagline": "Claude Code is waiting. Hawky noticed.",
@@ -42,7 +42,7 @@
     },
     "finished": {
       "title": "Shows who is waiting for a prompt",
-      "body": "A session that has finished and is waiting for your next prompt is listed on its own, without adding to the count."
+      "body": "A session that has finished and is waiting for your next prompt is listed on its own, without adding to the count. In the Claude desktop app, it stays only while the session is marked unread in the sidebar."
     },
     "working": {
       "title": "Counts working sessions too",
@@ -84,7 +84,7 @@
     "sections": [
       {
         "title": "What it reads",
-        "body": "Hawky's Claude Code hook writes a small file for each session that is working, or waiting for permission or for your next prompt: the session ID, the folder it was opened in, the session title from the end of its transcript, where the transcript is, the ID of its Claude Code process, the app it runs in, and the time. The app reads those files, and the titles of Cursor's and VS Code's windows and tabs so it can find the right one. For a working session, it reads the end of the transcript to tell whether you stopped it with Esc, looking only for the note Claude Code leaves when that happens. It does not otherwise read your code or your conversations."
+        "body": "Hawky's Claude Code hook writes a small file for each session that is working, or waiting for permission or for your next prompt: the session ID, the folder it was opened in, the session title from the end of its transcript, where the transcript is, the ID of its Claude Code process, the app it runs in, and the time. The app reads those files, and the titles of Cursor's and VS Code's windows and tabs so it can find the right one. For sessions in the Claude desktop app, it reads the app's own record of each session (its ID and title) and the list of sessions marked unread in the sidebar. For a working session, it reads the end of the transcript to tell whether you stopped it with Esc, looking only for the note Claude Code leaves when that happens. It does not otherwise read your code or your conversations."
       },
       {
         "title": "Nothing leaves the Mac",

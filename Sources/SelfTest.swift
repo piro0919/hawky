@@ -298,6 +298,130 @@ enum SelfTest {
             check(!Hook.interrupted("", since: started), "transcript が無ければ中断とみなさない")
         }
 
+        // Snappy の展開。字の並び3つのあとに、3バイト前から6バイト写す
+        do {
+            let compressed: [UInt8] = [0x09, 0x08, 0x61, 0x62, 0x63, 0x09, 0x03]
+            check(Snappy.decompress(compressed) == Array("abcabcabc".utf8), "前の字を重ねて写して展開する")
+            check(Snappy.decompress([0x0a, 0x08, 0x61, 0x62, 0x63, 0x09, 0x03]) == nil, "長さが合わなければ読まない")
+            check(Snappy.decompress([0x09, 0x08, 0x61, 0x62, 0x63, 0x09, 0x09]) == nil, "出した字より前は写さない")
+        }
+
+        // LevelDB の書き込みの控えと表。本物と同じ並びのバイト列を組んで読む
+        do {
+            func varint(_ n: Int) -> [UInt8] {
+                var n = n
+                var out: [UInt8] = []
+                while n >= 0x80 {
+                    out.append(UInt8(n & 0x7f) | 0x80)
+                    n >>= 7
+                }
+                return out + [UInt8(n)]
+            }
+            func le(_ n: UInt64, _ count: Int) -> [UInt8] { (0..<count).map { UInt8((n >> (8 * UInt64($0))) & 0xff) } }
+            let key = Array("_https://claude.ai\u{0}\u{1}epitaxy-unread-v1".utf8)
+            let match: ([UInt8]) -> Bool = { $0.ends(with: Array("\u{0}\u{1}epitaxy-unread-v1".utf8)) }
+
+            // 控え: 通し番号 7 から2件。1件目が書き込み、2件目が別の鍵の削除
+            let batch =
+                le(7, 8) + le(2, 4) + [1] + varint(key.count) + key + varint(3) + Array("old".utf8)
+                + [0] + varint(3) + Array("abc".utf8)
+            let record = [0, 0, 0, 0] + le(UInt64(batch.count), 2) + [1] + batch
+            let records = LevelDB.log(record)
+            check(
+                records.count == 2 && records[0].key == key && records[0].entry.sequence == 7
+                    && records[0].entry.value == Array("old".utf8) && records[1].entry.sequence == 8
+                    && records[1].entry.type == 0,
+                "書き込みの控えから鍵と値と通し番号を読む")
+            check(LevelDB.log(Array(record.dropLast(2))).isEmpty, "途中で切れた控えは読み飛ばす")
+
+            // 表: 無圧縮の塊1つと、それを指す索引。鍵の末尾8バイトに通し番号と種類が入る
+            func block(_ items: [([UInt8], [UInt8])]) -> [UInt8] {
+                items.flatMap { varint(0) + varint($0.0.count) + varint($0.1.count) + $0.0 + $0.1 } + le(0, 4)
+                    + le(1, 4)
+            }
+            let data = block([(key + le(9 << 8 | 1, 8), Array("new".utf8))])
+            let dataHandle = varint(0) + varint(data.count)
+            let indexOffset = data.count + 5
+            let index = block([(key + le(9 << 8 | 1, 8), dataHandle)])
+            let metaHandle = varint(indexOffset + index.count + 5) + varint(0)
+            var footer = metaHandle + varint(indexOffset) + varint(index.count)
+            footer += [UInt8](repeating: 0, count: 40 - footer.count) + le(0xdb47_7524_8b80_fb57, 8)
+            let table = data + [0, 0, 0, 0, 0] + index + [0, 0, 0, 0, 0] + footer
+            let rows = LevelDB.table(table)
+            check(
+                rows.count == 1 && rows[0].key == key && rows[0].entry.sequence == 9
+                    && rows[0].entry.value == Array("new".utf8),
+                "表の塊から鍵と値と通し番号を読む")
+
+            let fm = FileManager.default
+            let dir = fm.temporaryDirectory.appendingPathComponent("hawky-selftest-\(UUID().uuidString)")
+            defer { try? fm.removeItem(at: dir) }
+            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            try? Data(record).write(to: dir.appendingPathComponent("000003.log"))
+            try? Data(table).write(to: dir.appendingPathComponent("000004.ldb"))
+            check(
+                LevelDB.latest(in: dir, matching: match)?.value == Array("new".utf8),
+                "控えと表のうち、通し番号の大きい方を取る")
+        }
+
+        // デスクトップアプリの未読の一覧
+        do {
+            let json =
+                #"{"state":{"unreadIds":["local_a"],"explicitUnreadIds":["local_b"],"stoppedRuns":[]},"version":0}"#
+            check(
+                Desktop.unreadIDs(fromLocalStorage: [1] + Array(json.utf8)) == ["local_a", "local_b"],
+                "1バイトずつの値から未読と「未読にする」の印を読む")
+            let utf16 = [UInt8](json.data(using: .utf16LittleEndian)!)
+            check(Desktop.unreadIDs(fromLocalStorage: [0] + utf16) == ["local_a", "local_b"], "UTF-16 の値も読む")
+            check(Desktop.unreadIDs(fromLocalStorage: [1] + Array("{".utf8)) == nil, "壊れた値は読まない")
+
+            let state =
+                #"{"sessionId":"local_a","cliSessionId":"cli-1","lastAssistantCliSessionId":"cli-2","title":"状況確認","isArchived":false}"#
+            let pairs = Desktop.session(fromState: Data(state.utf8))
+            check(
+                pairs.map(\.0) == ["cli-1", "cli-2"]
+                    && pairs.allSatisfy { $0.1 == Desktop.Session(id: "local_a", title: "状況確認") },
+                "どちらの Claude Code のセッションからも引ける")
+            let archived = #"{"sessionId":"local_a","cliSessionId":"cli-1","isArchived":true}"#
+            check(Desktop.session(fromState: Data(archived.utf8)).isEmpty, "アーカイブしたセッションは引かない")
+
+            let app = Desktop.bundleID
+            let sessions = [
+                "read": Desktop.Session(id: "local_read", title: "読んだ"),
+                "unread": Desktop.Session(id: "local_unread", title: "未読"),
+                "asking": Desktop.Session(id: "local_asking", title: "許可"),
+            ]
+            func pending(_ id: String, _ kind: Pending.Kind, app: String = app, title: String = "") -> Pending {
+                Pending(
+                    sessionID: id, cwd: "/Users/me/Repository/hawky", title: title, at: Date(), app: app, kind: kind)
+            }
+            let all = [
+                pending("read", .finished), pending("unread", .finished), pending("asking", .permission),
+                pending("lost", .finished), pending("cursor", .finished, app: Focus.cursorBundleID),
+            ]
+            let applied = Desktop.apply(all, sessions: sessions, unread: ["local_unread"])
+            check(!applied.contains { $0.sessionID == "read" }, "読んだ指示待ちは外す")
+            check(
+                applied.first { $0.sessionID == "unread" }.map { $0.title == "未読" && $0.desktopID == "local_unread" }
+                    == true,
+                "未読の指示待ちは残し、題名と飛び先を付ける")
+            check(applied.contains { $0.sessionID == "asking" }, "許可待ちは未読でなくても残す")
+            check(applied.contains { $0.sessionID == "lost" }, "デスクトップアプリの記録に無いセッションは残す")
+            check(
+                applied.first { $0.sessionID == "cursor" }?.desktopID == "",
+                "ほかのアプリのセッションには触らない")
+            check(Desktop.apply(all, sessions: sessions, unread: nil).count == all.count, "未読の一覧が読めなければ何も外さない")
+            check(
+                Desktop.apply(
+                    [pending("unread", .finished, title: "元の題名")], sessions: sessions, unread: ["local_unread"]
+                )
+                .first?.title == "元の題名",
+                "transcript から題名を拾えていればそれを使う")
+            check(
+                Desktop.link(for: "local_a")?.absoluteString == "claude://claude.ai/epitaxy/local_a",
+                "セッションのリンクを組む")
+        }
+
         print(failures == 0 ? "selftest: ok" : "selftest: \(failures) failed")
         return failures == 0 ? 0 : 1
     }

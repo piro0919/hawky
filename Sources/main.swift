@@ -78,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }()
 
     private func refresh() {
-        pending = Store.load()
+        pending = Desktop.apply(Store.load())
         updateAnimation()
         drawStatus()
     }

@@ -6,6 +6,17 @@ its release notes, and stops if that section is missing or empty — so before r
 
 Versions up to v0.1.5 predate this file; their history is in `git log`.
 
+## Unreleased
+
+### Fixed
+
+- Sessions in the Claude desktop app no longer pile up under *Waiting for your next prompt*.
+  The app keeps every open session's Claude Code process running until you archive it, so
+  they never cleared. Hawky now lists one only while the app's sidebar marks it unread.
+- Sessions in the Claude desktop app now show their title, and picking one opens that
+  session in the app. Before, the rows showed only the folder, and picking one just brought
+  the app to the front.
+
 ## [0.2.3] - 2026-10-13
 
 ### Fixed

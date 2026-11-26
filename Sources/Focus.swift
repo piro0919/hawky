@@ -56,6 +56,13 @@ enum Focus {
         if #available(macOS 14.0, *) {
             NSApp.yieldActivation(to: app)
         }
+
+        // デスクトップアプリは窓の名前で探せない。セッションのリンクを開いて切り替える
+        if !pending.desktopID.isEmpty, let link = Desktop.link(for: pending.desktopID) {
+            log("reveal desktop \(pending.desktopID)")
+            NSWorkspace.shared.open(link)
+            return
+        }
         app.activate(options: [.activateAllWindows])
 
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
